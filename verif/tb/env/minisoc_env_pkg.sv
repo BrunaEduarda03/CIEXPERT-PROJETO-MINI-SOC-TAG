@@ -7,6 +7,7 @@ package minisoc_env_pkg;
 
   import clk_pkg::*;
   import rst_pkg::*;
+  import mem_pkg::*;
 
   `include "minisoc_env_cfg.sv"
   `include "minisoc_env.sv"

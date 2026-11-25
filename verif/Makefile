@@ -34,15 +34,20 @@ RTL_SRCS := \
 TB_INCDIRS := \
 	+incdir+$(TB_DIR)/agents/clk \
 	+incdir+$(TB_DIR)/agents/rst \
+	+incdir+$(TB_DIR)/agents/mem \
+	+incdir+$(TB_DIR)/sequences/mem \
 	+incdir+$(TB_DIR)/env \
 	+incdir+$(TB_DIR)/tests
 
 TB_SRCS := \
 	$(TB_DIR)/agents/clk/clk_if.sv \
 	$(TB_DIR)/agents/rst/rst_if.sv \
+	$(TB_DIR)/agents/mem/mem_if.sv \
 	$(TB_DIR)/minisoc_probe_if.sv \
 	$(TB_DIR)/agents/clk/clk_pkg.sv \
 	$(TB_DIR)/agents/rst/rst_pkg.sv \
+	$(TB_DIR)/agents/mem/mem_pkg.sv \
+	$(TB_DIR)/sequences/mem/mem_seq_pkg.sv \
 	$(TB_DIR)/env/minisoc_env_pkg.sv \
 	$(TB_DIR)/tests/minisoc_test_pkg.sv
 

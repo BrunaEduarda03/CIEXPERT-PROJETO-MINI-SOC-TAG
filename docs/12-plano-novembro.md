@@ -128,7 +128,7 @@ verif/tb/sequences/mem/
 
 | Peça | Conteúdo |
 |---|---|
-| `mem_if` | Recebe `mem_clk` como porta (como o `rst_if` recebe `clk`); sinais `mem_i_data[31:0]`, `mem_i_wr_en`, `mem_i_addr[9:0]`, `mem_o_data[31:0]`; clocking blocks para driver e monitor. O `mem_clk` continua vindo do `mem_clk_agt` que você já tem. |
+| `mem_if` | Recebe `mem_clk` como porta (como o `rst_if` recebe `clk`); sinais `mem_i_data[31:0]`, `mem_i_wr_en`, `mem_i_addr[9:0]`, `mem_o_data[31:0]`; sem clocking block nem modport (decisao de 24/11): driver e monitor na subida de `mem_clk`; driver usa atribuicao nao-bloqueante (`<=`) para nao correr com o DUT. O `mem_clk` continua vindo do `mem_clk_agt` que você já tem. |
 | `mem_item` | `op` (R/W), `addr[9:0]`, `wdata`, `rdata`. |
 | `mem_driver` | Escrita: `wr_en=1` + addr + data por 1 ciclo. Leitura: `wr_en=0` + addr, espera a latência de **1 ciclo** (VPLAN F12) e captura `mem_o_data`. Ociosa: `wr_en=0`. |
 | `mem_monitor` | Publica escritas e leituras com o dado de retorno. |
@@ -139,7 +139,12 @@ verif/tb/sequences/mem/
 > precisa saber o que é "transação". Opções:
 > (a) sinal `tb_valid` só no `mem_if` (não vai ao DUT), dirigido pelo driver — simples e sem ruído;
 > (b) monitor publica toda escrita e só leituras com endereço novo — 100% passivo, mais frágil.
-> Recomendo **(a)**, e registrar no VPLAN o motivo (interface sem handshake, spec 3/7.3).
+> (c) monitor publica **todo ciclo** como transação (escrita se `wr_en = 1`, leitura se `wr_en = 0`) — é o que a RAM faz.
+>
+> **Decidido em 24/11: (c).** A `mem_if` tem só os sinais do DUT; o monitor é 100% passivo
+> (funciona com o agent em modo passivo) e o scoreboard recebe todas as leituras reais.
+> Custo: mais transações (leituras vão para o log só em `UVM_HIGH`). Registrar no VPLAN
+> o motivo (interface sem handshake, spec 3/7.3).
 
 ### 3.4 Checagem local da memória — **obrigatório**
 
