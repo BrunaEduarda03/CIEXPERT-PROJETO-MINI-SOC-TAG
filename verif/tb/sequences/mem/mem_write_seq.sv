@@ -1,6 +1,4 @@
-//-----------------------------------------------------------------------------
 // mem_write_seq.sv - uma escrita: memory[addr] = data
-//-----------------------------------------------------------------------------
 class mem_write_seq extends uvm_sequence #(mem_item);
   `uvm_object_utils(mem_write_seq)
 
@@ -13,11 +11,10 @@ class mem_write_seq extends uvm_sequence #(mem_item);
 
   task body();
     req = mem_item::type_id::create("req");
-    start_item(req);
+    start_item(req);                 // pede a vez ao sequencer
     req.op   = MEM_WRITE;
     req.addr = addr;
     req.data = data;
-    finish_item(req);
+    finish_item(req);                // espera o driver terminar
   endtask
-
-endclass : mem_write_seq
+endclass

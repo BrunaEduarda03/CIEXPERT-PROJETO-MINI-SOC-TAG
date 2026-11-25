@@ -28,7 +28,7 @@ class minisoc_env extends uvm_env;
     uvm_config_db#(clk_cfg)::set(this, "ref_clk_agt", "cfg", cfg.ref_clk);
     uvm_config_db#(clk_cfg)::set(this, "mem_clk_agt", "cfg", cfg.mem_clk);
     uvm_config_db#(rst_cfg)::set(this, "rst_agt",     "cfg", cfg.rst);
-    uvm_config_db#(mem_cfg)::set(this, "mem_agt",     "cfg", cfg.mem);
+    uvm_config_db#(virtual mem_if)::set(this, "mem_agt", "vif", cfg.mem_vif);
 
     ref_clk_agt = clk_agent::type_id::create("ref_clk_agt", this);
     mem_clk_agt = clk_agent::type_id::create("mem_clk_agt", this);
