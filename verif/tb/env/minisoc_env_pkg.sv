@@ -10,5 +10,6 @@ package minisoc_env_pkg;
   import mem_pkg::*;
 
   `include "minisoc_env_cfg.sv"
+  `include "mem_scoreboard.sv"
   `include "minisoc_env.sv"
 endpackage : minisoc_env_pkg

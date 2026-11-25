@@ -63,113 +63,73 @@ ref_clk_agt mem_clk_agt rst_agt       mem_agt (NOVO)       spi_agt (NOVO)
 
 ---
 
-## 3. O que precisa existir no dia 30/11 (escopo mínimo)
+## 4. Por que esta ordem
 
-Ordem de prioridade — se faltar tempo, corte de baixo para cima.
+1. **Memória primeiro, porque é mais simples e não depende de nada.**
+   - Protocolo trivial: 1 ciclo por acesso, sem frames, sem CDC.
+   - Depois do reset o DUT já entrega a memória à interface externa
+     (`MEM_SEL_AES = 0` é o valor de reset), então dá para escrever e ler
+     **sem precisar do SPI**.
+   - Você aprende o padrão completo (if → item → cfg → driver → monitor →
+     agent → sequence → scoreboard → teste) num caso fácil, e depois só
+     repete no SPI.
+2. **SPI depois, reaproveitando o padrão.** Mesma estrutura de arquivos, só o
+   protocolo é mais elaborado (frame de 40 bits, leitura em 2 frames).
+3. **Integração por último.** O teste de *ownership* precisa dos dois VIPs:
+   o SPI muda `MEM_SEL_AES` e a memória confere que o acesso externo foi bloqueado.
+4. **De dentro para fora**, como no clk/rst (doc 11): cada arquivo só usa o que
+   já existe, então **compila a cada passo**.
+5. **Algo rodando no fim de cada etapa.** Se o tempo acabar, o que está pronto
+   continua demonstrável.
 
-### 3.1 VIP SPI — **obrigatório**
+---
 
-Arquivos (estrutura do Plano Dia 3, seção 5):
+## 5. Arquivos, na ordem de criação
 
-```
-verif/tb/agents/spi/
-  spi_if.sv  spi_item.sv  spi_cfg.sv  spi_driver.sv
-  spi_monitor.sv  spi_sequencer.sv  spi_agent.sv  spi_pkg.sv
-verif/tb/sequences/spi/
-  spi_write_seq.sv  spi_read_seq.sv  spi_reg_seqs.sv
-```
+Legenda: 🆕 novo · ✏️ existente que muda.
 
-O que cada peça precisa fazer (regras do Block Guide seção 5):
+### PARTE 1 — MEMORY DATA
 
-| Peça | Conteúdo |
-|---|---|
-| `spi_if` | `sclk`, `cs_n`, `mosi`, `miso`. |
-| `spi_item` | `op` (WRITE/READ), `addr[5:0]`, `wdata[31:0]`, `rdata[31:0]`; constraint `addr` em 0x00–0x0F/0x3F (e um modo "não mapeado" para 0x10–0x3E). |
-| `spi_cfg` | `sclk_period_ns` (default 50 ns = 20 MHz; **mínimo 40 ns = 25 MHz**), gap entre frames, `is_active`. |
-| `spi_driver` | Gera o próprio `sclk`. Mode 0: `sclk` em 0 no repouso, MOSI muda com `sclk` baixo, DUT amostra na **subida**. Frame de 40 bits MSB-first: `{RWb, ADDR[5:0], RSV=0, DATA[31:0]}`. **WRITE** = 1 frame. **READ** = 2 frames: request (`RWb=1`, addr) + frame NOP (addr `0x3F`), capturando MISO bits [31:0] do 2º frame. Devolve `rdata` com `put_response()` (decisão do Dia 3: "resposta separada via `get_response()`"). |
-| `spi_monitor` | Passivo. Amostra MOSI e MISO na subida de `sclk`; fecha o frame na subida de `cs_n`. Frame com ≠ 40 bits → reporta como abortado. Junta request + NOP em **uma** transação READ com o dado lido. Publica no `analysis_port`. |
-| `spi_agent` | Ativo: sequencer + driver + monitor. Passivo: só monitor. |
-| Sequences | `spi_write_seq(addr, data)`, `spi_read_seq(addr) → data`, `spi_reg_rw_seq` (escreve e lê de volta). |
+Regras da interface (Block Guide 3 e 7; RTL `minisoc_memory.sv`):
+- tudo síncrono a `mem_clk` (que já vem do seu `mem_clk_agt`);
+- `wr_en = 1`: grava `data` em `addr` na borda de subida;
+- `wr_en = 0`: lê `addr`; o dado aparece em `mem_o_data` **1 ciclo depois**;
+- durante uma escrita, `mem_o_data` **não muda** (mantém a última leitura);
+- só vale com `MEM_SEL_AES = 0`; **não tem reset** (conteúdo inicial indefinido).
 
-> Atenção ao CDC (spec 5.3): o frame é capturado em `sclk` e transportado para
-> o `clk` por toggle sync. Deixe um gap entre frames (≥ 1 período de `sclk`
-> já é muito mais que os ciclos de 2 GHz necessários).
+#### Etapa 1 — VIP de memória
 
-### 3.2 Checagem local do SPI — **obrigatório** (o checkpoint pede "checagens locais")
+| # | Arquivo | O que contém | Por quê |
+|---|---|---|---|
+| 1.1 | 🆕 `agents/mem/mem_if.sv` | Porta de entrada `mem_clk` (como o `rst_if` recebe `clk`); fios `mem_i_data[31:0]`, `mem_i_wr_en`, `mem_i_addr[9:0]`, `mem_o_data[31:0]`; e um sinal **`tb_valid`** que *não* vai ao DUT. | É o "conector físico" entre classes UVM e o DUT. O `tb_valid` resolve um problema real: a interface não tem sinal de *valid* — com `wr_en = 0` todo ciclo é uma "leitura". O driver levanta `tb_valid` só nas transações de verdade. |
+| 1.2 | 🆕 `agents/mem/mem_item.sv` | `op` (READ/WRITE), `addr[9:0]`, `data[31:0]`, `rdata[31:0]`; `convert2string()` para o log. | Define *a palavra* com que teste, driver, monitor e scoreboard conversam. Pensar em "escreva X no endereço Y", e não em bits, é a abstração central do UVM. |
+| 1.3 | 🆕 `agents/mem/mem_cfg.sv` | `vif`, `is_active`, `idle_cycles` entre acessos. | Mesmo padrão do `clk_cfg`: parâmetros fora do código. |
+| 1.4 | 🆕 `agents/mem/mem_driver.sv` | Na **descida** de `mem_clk` coloca endereço/dado/`wr_en`/`tb_valid = 1`; na leitura espera a subida seguinte e captura `mem_o_data` em `rdata`. Ocioso: `wr_en = 0`, `tb_valid = 0`. | Mudar na descida e o DUT ler na subida evita corrida de sinais (o mesmo truque da `mem_write` do projetista). |
+| 1.5 | 🆕 `agents/mem/mem_monitor.sv` | Na subida de `mem_clk`, se `tb_valid = 1`: escrita → publica; leitura → espera 1 ciclo, pega `mem_o_data` e publica no `analysis_port`. | O scoreboard **não pode** confiar no driver (o driver pode estar errado). O monitor olha só os fios — é a testemunha independente. |
+| 1.6 | 🆕 `agents/mem/mem_agent.sv` | Cria sequencer (`typedef uvm_sequencer #(mem_item)`) + driver + monitor e liga driver ↔ sequencer. Passivo = só monitor. | Empacota o VIP: o env cria **um** objeto e recebe tudo. |
+| 1.7 | 🆕 `agents/mem/mem_pkg.sv` | `package` que inclui 1.2–1.6. | Igual ao `clk_pkg`: um `import` e tudo fica visível. |
+| 1.8 | ✏️ `top_tb.sv` | Troca os `logic` fixos de memória por `mem_if mem_if_i(.mem_clk(mem_clk_if.clk))` e publica `mem_vif` no `config_db`. | Sem isso o driver não tem fio onde mexer. |
+| 1.9 | ✏️ `env/minisoc_env_cfg.sv`, `env/minisoc_env.sv`, `env/minisoc_env_pkg.sv`, `tests/minisoc_base_test.sv` | `mem_cfg` no env_cfg, `mem_agt` no env, `import mem_pkg`, base_test busca `mem_vif`. | O mesmo caminho que o `vif` do clock percorre hoje (doc 11, seção 3). |
+| 1.10 | ✏️ `Makefile` | `+incdir+` e fontes de `agents/mem/`. | O VCS precisa saber dos arquivos novos. |
 
-`verif/tb/env/spi_scoreboard.sv` (CHK-02 do VPLAN) — modelo simples de
-registradores, sem RAL (decisão do Dia 3):
+✅ **Pronto quando:** `make compile` passa e o smoke test continua PASS.
 
-- defaults pós-reset: KEY/IV/COUNTER = 0, `NUM_BLOCKS = 1`, `AES_CONTROL = 0`,
-  `SYSTEM_CONTROL`: `MEM_SEL_AES = 0`, `PLL_ENABLE = 0`, `PLL_DIV_SEL = 11`;
-- R/W (0x00–0x0B, 0x0E) devolvem o último valor escrito (com máscara de bits válidos);
-- RO (0x0C `AES_STATUS`, 0x0D `VERSION` = `0x0001_0100`, 0x0F `SYSTEM_STATUS`) ignoram escrita;
-- `START` lê sempre 0; não mapeados (0x10–0x3E) leem 0;
-- para `AES_STATUS`/`SYSTEM_STATUS` em novembro basta comparar com o `probe_vif`
-  (ou deixar como "não checado" e registrar no VPLAN).
+#### Etapa 2 — Sequences de memória + primeiro teste
 
-Divergência → `UVM_ERROR`. Leitura do `VERSION` resolve o **OPEN-03**.
+| # | Arquivo | O que contém | Por quê |
+|---|---|---|---|
+| 2.1 | 🆕 `sequences/mem/mem_write_seq.sv` | Recebe `addr`, `data`; manda 1 WRITE. | Bloco básico. |
+| 2.2 | 🆕 `sequences/mem/mem_read_seq.sv` | Recebe `addr`; manda 1 READ e devolve `rdata` via `get_response()`. | O outro bloco básico; a resposta volta para quem pediu. |
+| 2.3 | 🆕 `sequences/mem/mem_fill_seq.sv` | Escreve N palavras a partir de um endereço com um padrão: 0, `0xFFFFFFFF`, `0xAAAA5555`, walking-1, aleatório. | É exatamente o que dezembro vai usar para carregar os blocos do AES. |
+| 2.4 | 🆕 `sequences/minisoc_seq_pkg.sv` | `package` com as sequences (memória agora, SPI depois). | Segue a estrutura do Plano Dia 3 (`sequences/mem/`, `spi/`, `virtual/`). |
+| 2.5 | 🆕 `tests/minisoc_mem_rw_test.sv` | **T-MEM-RW (parte 1):** escreve e lê de volta os limites (0, 1023, 4k−1, 4k) e endereços aleatórios com os padrões. | Primeiro teste de interface. Roda sem SPI, porque `MEM_SEL_AES = 0` após o reset. |
+| 2.6 | ✏️ `tests/minisoc_test_pkg.sv`, `Makefile` | Inclui o teste e o pacote de sequences. | Registro na factory para `+UVM_TESTNAME` encontrar. |
 
-### 3.3 VIP MEMORY DATA — **obrigatório**
+✅ **Pronto quando:** o monitor imprime as escritas e leituras no log com os valores certos.
 
-```
-verif/tb/agents/mem/
-  mem_if.sv  mem_item.sv  mem_cfg.sv  mem_driver.sv
-  mem_monitor.sv  mem_sequencer.sv  mem_agent.sv  mem_pkg.sv
-verif/tb/sequences/mem/
-  mem_write_seq.sv  mem_read_seq.sv  mem_fill_seq.sv
-```
+#### Etapa 3 — Checagem local da memória
 
-| Peça | Conteúdo |
-|---|---|
-| `mem_if` | Recebe `mem_clk` como porta (como o `rst_if` recebe `clk`); sinais `mem_i_data[31:0]`, `mem_i_wr_en`, `mem_i_addr[9:0]`, `mem_o_data[31:0]`; sem clocking block nem modport (decisao de 24/11): driver e monitor na subida de `mem_clk`; driver usa atribuicao nao-bloqueante (`<=`) para nao correr com o DUT. O `mem_clk` continua vindo do `mem_clk_agt` que você já tem. |
-| `mem_item` | `op` (R/W), `addr[9:0]`, `wdata`, `rdata`. |
-| `mem_driver` | Escrita: `wr_en=1` + addr + data por 1 ciclo. Leitura: `wr_en=0` + addr, espera a latência de **1 ciclo** (VPLAN F12) e captura `mem_o_data`. Ociosa: `wr_en=0`. |
-| `mem_monitor` | Publica escritas e leituras com o dado de retorno. |
-| Sequences | escrita/leitura unitária; `fill` de N palavras; padrões 0, `0xFFFFFFFF`, `0xAAAA5555`, walking-1, aleatório (ST-MEM-01). |
-
-> **Decisão de arquitetura que você vai ter que justificar:** a interface não
-> tem sinal de *valid* — com `wr_en = 0` todo ciclo é uma leitura. O monitor
-> precisa saber o que é "transação". Opções:
-> (a) sinal `tb_valid` só no `mem_if` (não vai ao DUT), dirigido pelo driver — simples e sem ruído;
-> (b) monitor publica toda escrita e só leituras com endereço novo — 100% passivo, mais frágil.
-> (c) monitor publica **todo ciclo** como transação (escrita se `wr_en = 1`, leitura se `wr_en = 0`) — é o que a RAM faz.
->
-> **Decidido em 24/11: (c).** A `mem_if` tem só os sinais do DUT; o monitor é 100% passivo
-> (funciona com o agent em modo passivo) e o scoreboard recebe todas as leituras reais.
-> Custo: mais transações (leituras vão para o log só em `UVM_HIGH`). Registrar no VPLAN
-> o motivo (interface sem handshake, spec 3/7.3).
-
-### 3.4 Checagem local da memória — **obrigatório**
-
-`verif/tb/env/mem_scoreboard.sv` (CHK-04): array associativo como modelo da RAM.
-- Escrita com `MEM_SEL_AES = 0` → atualiza o modelo.
-- Escrita com `MEM_SEL_AES = 1` → **não** atualiza (ownership, F13). Leia `MEM_SEL_AES` do `probe_vif.cfg_mem_sel_aes`.
-- Leitura de endereço conhecido → compara; desconhecido → não checa (memória sem reset).
-
-### 3.5 Configuração básica do DUT — **obrigatório**
-
-Uma sequence (ou task no `base_test`) `minisoc_cfg_seq` que, via SPI:
-1. lê `VERSION`;
-2. escreve `PLL_DIV_SEL` e `PLL_ENABLE = 1` em `SYSTEM_CONTROL`;
-3. faz polling de `SYSTEM_STATUS.PLL_LOCKED` com **timeout** (CHK-08);
-4. escreve/limpa `MEM_SEL_AES`.
-
-Isso mostra a "configuração básica" e já prepara o fluxo de dezembro
-(passos 1–10 do modelo de programação, Block Guide seção 9).
-
-### 3.6 Integração no ambiente
-
-- `top_tb.sv`: trocar os `logic` fixos de SPI e MEMORY por `spi_if` e `mem_if`; publicar `spi_vif`/`mem_vif` no `config_db`.
-- `minisoc_env_cfg`: adicionar `spi_cfg` e `mem_cfg`.
-- `minisoc_env`: criar `spi_agt`, `mem_agt`, `spi_scb`, `mem_scb` e conectar `monitor.ap → scoreboard` no `connect_phase`.
-- `Makefile`: incluir os novos pacotes/`+incdir+`.
-
-### 3.7 Testes de interface — **obrigatório** (pelo menos os 4 primeiros)
-
-Nomes e IDs já definidos no VPLAN v1, seção 8:
-
-| Teste | O que faz | Checker | Prioridade |
+| # | Arquivo | O que contém | Por quê |
 |---|---|---|---|
 | 3.1 | 🆕 `env/mem_scoreboard.sv` | Um array associativo que imita a RAM. Escrita com `MEM_SEL_AES = 0` → atualiza; com `MEM_SEL_AES = 1` → **não** atualiza. Leitura de endereço já escrito → compara e dá `UVM_ERROR` se divergir; nunca escrito → ignora. `MEM_SEL_AES` vem do `probe_if`. `report_phase`: "N leituras comparadas, M erros". | É a "checagem local" que o marco pede. Sem ela o teste só *mostra* valores; com ela, o teste *julga*. Já nasce pronto para o ownership (Etapa 7). |
 | 3.2 | ✏️ `env/minisoc_env.sv` | Cria `mem_scb`, liga `mem_agt.mon.ap → mem_scb`, entrega o `probe_vif`. | É o fio de dados entre a testemunha (monitor) e o juiz (scoreboard). |

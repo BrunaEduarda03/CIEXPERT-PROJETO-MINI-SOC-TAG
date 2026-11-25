@@ -4,6 +4,7 @@
 #   make                      compila e roda o teste default (smoke)
 #   make compile              so compila
 #   make run TEST=<teste> SEED=<n> VERBOSITY=UVM_HIGH WAVES=fsdb|vcd
+#   make run ... PLUSARGS="+MEM_SCB_INJECT_ERR"   plusargs extras para o simv
 #   make verdi                abre o Verdi com as waves FSDB do ultimo run
 #   make clean
 #==============================================================================
@@ -18,6 +19,7 @@ TEST      ?= minisoc_smoke_test
 SEED      ?= 1
 VERBOSITY ?= UVM_MEDIUM
 WAVES     ?= none
+PLUSARGS  ?=
 
 #------------------------------------------------------------------------------
 # Fontes (ordem importa: interfaces -> pacotes -> RTL -> SVA -> top)
@@ -68,7 +70,8 @@ VCS_FLAGS := -full64 -sverilog -ntb_opts uvm-1.2 \
 RUN_FLAGS := +UVM_TESTNAME=$(TEST) \
 	+ntb_random_seed=$(SEED) \
 	+UVM_VERBOSITY=$(VERBOSITY) \
-	+UVM_NO_RELNOTES
+	+UVM_NO_RELNOTES \
+	$(PLUSARGS)
 
 ifeq ($(WAVES),fsdb)
 RUN_FLAGS += +FSDB
@@ -105,4 +108,4 @@ clean:
 	rm -rf $(SIM_DIR)
 
 help:
-	@sed -n '2,9p' Makefile
+	@sed -n '2,10p' Makefile
