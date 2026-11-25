@@ -1,0 +1,44 @@
+cd /home/bruna.maciel/CIEXPERT---PROJETO-MINI-SOC-TAG/verif/sim && vcs -full64 -sverilog -ntb_opts uvm-1.2 -timescale=1ns/1ps -debug_access+all -kdb +lint=TFIPC-L -top top_tb -l /home/bruna.maciel/CIEXPERT---PROJETO-MINI-SOC-TAG/verif/sim/logs/compile.log +incdir+/home/bruna.maciel/CIEXPERT---PROJETO-MINI-SOC-TAG/verif/tb/agents/clk +incdir+/home/bruna.maciel/CIEXPERT---PROJETO-MINI-SOC-TAG/verif/tb/agents/rst +incdir+/home/bruna.maciel/CIEXPERT---PROJETO-MINI-SOC-TAG/verif/tb/agents/mem +incdir+/home/bruna.maciel/CIEXPERT---PROJETO-MINI-SOC-TAG/verif/tb/agents/spi +incdir+/home/bruna.maciel/CIEXPERT---PROJETO-MINI-SOC-TAG/verif/tb/sequences +incdir+/home/bruna.maciel/CIEXPERT---PROJETO-MINI-SOC-TAG/verif/tb/env +incdir+/home/bruna.maciel/CIEXPERT---PROJETO-MINI-SOC-TAG/verif/tb/tests /home/bruna.maciel/CIEXPERT---PROJETO-MINI-SOC-TAG/verif/tb/agents/clk/clk_if.sv /home/bruna.maciel/CIEXPERT---PROJETO-MINI-SOC-TAG/verif/tb/agents/rst/rst_if.sv /home/bruna.maciel/CIEXPERT---PROJETO-MINI-SOC-TAG/verif/tb/agents/mem/mem_if.sv /home/bruna.maciel/CIEXPERT---PROJETO-MINI-SOC-TAG/verif/tb/agents/spi/spi_if.sv /home/bruna.maciel/CIEXPERT---PROJETO-MINI-SOC-TAG/verif/tb/minisoc_probe_if.sv /home/bruna.maciel/CIEXPERT---PROJETO-MINI-SOC-TAG/verif/tb/agents/clk/clk_pkg.sv /home/bruna.maciel/CIEXPERT---PROJETO-MINI-SOC-TAG/verif/tb/agents/rst/rst_pkg.sv /home/bruna.maciel/CIEXPERT---PROJETO-MINI-SOC-TAG/verif/tb/agents/mem/mem_pkg.sv /home/bruna.maciel/CIEXPERT---PROJETO-MINI-SOC-TAG/verif/tb/agents/spi/spi_pkg.sv /home/bruna.maciel/CIEXPERT---PROJETO-MINI-SOC-TAG/verif/tb/env/minisoc_env_pkg.sv /home/bruna.maciel/CIEXPERT---PROJETO-MINI-SOC-TAG/verif/tb/sequences/minisoc_seq_pkg.sv /home/bruna.maciel/CIEXPERT---PROJETO-MINI-SOC-TAG/verif/tb/tests/minisoc_test_pkg.sv /home/bruna.maciel/CIEXPERT---PROJETO-MINI-SOC-TAG/frontend/rtl/minisoc_aes/minisoc_aes_key_exp.sv /home/bruna.maciel/CIEXPERT---PROJETO-MINI-SOC-TAG/frontend/rtl/minisoc_aes/minisoc_aes_dp.sv /home/bruna.maciel/CIEXPERT---PROJETO-MINI-SOC-TAG/frontend/rtl/minisoc_aes/minisoc_aes_top.sv /home/bruna.maciel/CIEXPERT---PROJETO-MINI-SOC-TAG/frontend/rtl/minisoc_mem/minisoc_memory.sv /home/bruna.maciel/CIEXPERT---PROJETO-MINI-SOC-TAG/frontend/rtl/minisoc_pll/minisoc_pll_mock.sv /home/bruna.maciel/CIEXPERT---PROJETO-MINI-SOC-TAG/frontend/rtl/minisoc_spi/minisoc_spi.sv /home/bruna.maciel/CIEXPERT---PROJETO-MINI-SOC-TAG/frontend/rtl/minisoc_top.sv /home/bruna.maciel/CIEXPERT---PROJETO-MINI-SOC-TAG/verif/tb/top_assertions.sv /home/bruna.maciel/CIEXPERT---PROJETO-MINI-SOC-TAG/verif/tb/top_tb.sv -o simv
+                         Chronologic VCS (TM)
+       Version X-2025.06-SP2_Full64 -- Wed Nov 25 02:02:15 2026
+
+                    Copyright (c) 1991 - 2025 Synopsys, Inc.
+   This software and the associated documentation are proprietary to Synopsys,
+ Inc. This software may only be used in accordance with the terms and conditions
+ of a written license agreement with Synopsys, Inc. All other use, reproduction,
+   or distribution of this software is strictly prohibited.  Licensed Products
+     communicate with Synopsys servers for the purpose of providing software
+    updates, detecting software piracy and verifying that customers are using
+    Licensed Products in conformity with the applicable License Key for such
+  Licensed Products. Synopsys will use information gathered in connection with
+    this process to deliver software updates and pursue software pirates and
+                                   infringers.
+
+ Inclusivity & Diversity - Visit SolvNetPlus to read the "Synopsys Statement on
+            Inclusivity and Diversity" (Refer to article 000036315 at
+                        https://solvnetplus.synopsys.com)
+
+The design hasn't changed and need not be recompiled. 
+If you really want to, delete file /home/bruna.maciel/CIEXPERT---PROJETO-MINI-SOC-TAG/verif/sim/simv.daidir/.vcs.timestamp and
+run VCS again.
+
+minisoc_smoke_test           seed=1   PASS
+minisoc_smoke_test           seed=2   PASS
+minisoc_smoke_test           seed=3   PASS
+minisoc_mem_rw_test          seed=1   PASS
+minisoc_mem_rw_test          seed=2   PASS
+minisoc_mem_rw_test          seed=3   PASS
+minisoc_rst_default_test     seed=1   PASS
+minisoc_rst_default_test     seed=2   PASS
+minisoc_rst_default_test     seed=3   PASS
+minisoc_spi_reg_test         seed=1   PASS
+minisoc_spi_reg_test         seed=2   PASS
+minisoc_spi_reg_test         seed=3   PASS
+minisoc_pll_bringup_test     seed=1   PASS
+minisoc_pll_bringup_test     seed=2   PASS
+minisoc_pll_bringup_test     seed=3   PASS
+minisoc_mem_owner_test       seed=1   PASS
+minisoc_mem_owner_test       seed=2   PASS
+minisoc_mem_owner_test       seed=3   PASS
+------------------------------------------------
+PASS: 18  FAIL: 0

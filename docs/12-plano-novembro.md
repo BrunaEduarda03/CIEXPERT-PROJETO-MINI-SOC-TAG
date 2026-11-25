@@ -1,7 +1,8 @@
 # 12 — Plano de execução do checkpoint de novembro (prazo 30/11/2026)
 
 > **Status:** Partes 1, 2 e 3 (código, Etapas 1–8) ✅ · `make regress` 18/18 PASS.
-> Falta: VPLAN v2, evidências de novembro e slides (seção 8). Todo código novo segue as **Regras de código** da seção 5.
+> Evidências ✅ em `verif/doc/evidencias/novembro/` (ver `instrucao.md`).
+> Falta: VPLAN v2 e slides (seção 8). Todo código novo segue as **Regras de código** da seção 5.
 
 **Em uma frase:** em outubro o testbench aprendeu a *ligar* o DUT (clock e
 reset). Agora ele precisa aprender a *conversar* com o DUT — pela **MEMORY
