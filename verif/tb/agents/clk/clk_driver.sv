@@ -13,14 +13,14 @@ class clk_driver extends uvm_driver #(uvm_sequence_item);
     super.new(name, parent);
   endfunction
 
-  // function void connect_phase(uvm_phase phase);
-  //   super.connect_phase(phase);
-  //   if (cfg == null)
-  //     `uvm_fatal("CLK_NOCFG", "clk_cfg nao atribuido ao driver")
-  //   vif = cfg.vif;
-  //   if (vif == null)
-  //     `uvm_fatal("CLK_NOVIF", "clk_cfg.vif e nulo")
-  // endfunction
+  function void connect_phase(uvm_phase phase);
+    super.connect_phase(phase);
+    if (cfg == null)
+      `uvm_fatal("CLK_NOCFG", "clk_cfg nao atribuido ao driver")
+    vif = cfg.vif;
+    if (vif == null)
+      `uvm_fatal("CLK_NOVIF", "clk_cfg.vif e nulo")
+  endfunction
 
   task run_phase(uvm_phase phase);
     vif.clk = 1'b0;
