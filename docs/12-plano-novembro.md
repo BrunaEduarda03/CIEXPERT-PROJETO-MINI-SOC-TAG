@@ -7,7 +7,7 @@ atual de `verif/tb/`.
 
 Hoje: **ter 24/11**. Prazo: **seg 30/11**. São **6 dias**.
 
----
+
 
 ## 1. O que o plano de projeto exige para novembro
 
