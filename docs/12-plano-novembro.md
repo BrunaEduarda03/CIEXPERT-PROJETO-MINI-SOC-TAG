@@ -1,7 +1,7 @@
 # 12 — Plano de execução do checkpoint de novembro (prazo 30/11/2026)
 
-> **Status:** Parte 1 (MEMORY DATA, Etapas 1–3) ✅ concluída · Partes 2 e 3
-> pendentes. Todo código novo segue as **Regras de código** da seção 5.
+> **Status:** Parte 1 (MEMORY DATA, Etapas 1–3) ✅ · Parte 2 (SPI, Etapas 4–6) ✅ ·
+> Parte 3 pendente. Todo código novo segue as **Regras de código** da seção 5.
 
 **Em uma frase:** em outubro o testbench aprendeu a *ligar* o DUT (clock e
 reset). Agora ele precisa aprender a *conversar* com o DUT — pela **MEMORY
@@ -164,7 +164,14 @@ Regras da interface (Block Guide 3 e 7; RTL `minisoc_memory.sv`):
 
 ---
 
-### PARTE 2 — SPI
+### PARTE 2 — SPI ✅ concluída
+
+> Etapas 4–6 implementadas (~350 linhas em 9 arquivos novos). Seeds 1, 7, 42:
+> `minisoc_rst_default_test` PASS (16 leituras, `VERSION = 0x0001_0100` lido pelo SPI)
+> e `minisoc_spi_reg_test` PASS (114 leituras comparadas, 0 erros). Smoke e
+> T-MEM-RW continuam PASS. Falhas provocadas: reset errado de NUM_BLOCKS no
+> espelho → T-RST-DEFAULT FAIL; máscara errada de NUM_BLOCKS → T-SPI-REG FAIL.
+> As tabelas abaixo já refletem o que foi feito.
 
 Regras do protocolo (Block Guide 5; RTL `minisoc_spi.sv`):
 - frame de **40 bits**, MSB primeiro: `{RWb, ADDR[5:0], RSV=0, DATA[31:0]}`;
@@ -181,12 +188,12 @@ Regras do protocolo (Block Guide 5; RTL `minisoc_spi.sv`):
 |---|---|---|---|
 | 4.1 | 🆕 `agents/spi/spi_if.sv` | `sclk`, `cs_n`, `mosi`, `miso`; repouso `cs_n = 1`, `sclk = 0`. | Conector físico, como o `mem_if`. |
 | 4.2 | 🆕 `agents/spi/spi_item.sv` | `op` (WRITE/READ), `addr[5:0]`, `data[31:0]`, `rdata[31:0]`; `convert2string()`. | A "palavra" do SPI: "ler o registrador X". |
-| 4.3 | 🆕 `agents/spi/spi_cfg.sv` | `vif`, `sclk_half_ns` (25), `gap_ns`; `is_valid()` recusa `sclk` > 25 MHz. | Parâmetros fora do código e proteção contra violar a spec. |
+| 4.3 | ~~`agents/spi/spi_cfg.sv`~~ | **Removido** (regra 3), como o `mem_cfg`. Os tempos ficam no driver: `half = 25ns` (20 MHz) e `gap = 20ns`. | Ninguém muda esses valores hoje; um arquivo a menos. |
 | 4.4 | 🆕 `agents/spi/spi_driver.sv` | Task `transfer(tx40, rx40)` (como a `spi_transfer` do projetista). WRITE chama 1 vez; READ chama 2 vezes e guarda `rx[31:0]` em `req.rdata` antes do `item_done()` (mesmo esquema do `mem_driver`, regra 7). | É quem "fala SPI" e **esconde o frame NOP** do teste. O Plano Dia 3 citava `put_response`; trocado pelo padrão mais simples da memória. |
-| 4.5 | 🆕 `agents/spi/spi_monitor.sv` | Na subida de `sclk` guarda MOSI e MISO; na subida de `cs_n` fecha o frame. Frame ≠ 40 bits → aviso "abortado". Junta pedido + NOP numa só transação READ. Publica no `analysis_port`. | Testemunha independente. Juntar os 2 frames mantém a abstração do lado de quem observa. |
+| 4.5 | 🆕 `agents/spi/spi_monitor.sv` | Na subida de `sclk` guarda MOSI e MISO; na subida de `cs_n` fecha o frame. Frame ≠ 40 bits → `uvm_warning` "abortado". Pedido de leitura fica pendente e é completado com o MISO do frame seguinte; frames NOP (`0x3F`) não viram transação. Publica no `analysis_port`. | Testemunha independente. Juntar os 2 frames mantém a abstração do lado de quem observa. |
 | 4.6 | 🆕 `agents/spi/spi_agent.sv` | Sequencer + driver + monitor. | Igual ao `mem_agent`. |
-| 4.7 | 🆕 `agents/spi/spi_pkg.sv` | Pacote com 4.2–4.6. | — |
-| 4.8 | ✏️ `top_tb.sv`, `env/*`, `tests/minisoc_base_test.sv`, `Makefile` | Mesmo roteiro da 1.8–1.10, agora para `spi_if` / `spi_agt`. | — |
+| 4.7 | 🆕 `agents/spi/spi_pkg.sv` | Pacote com item, driver, monitor e agent. | — |
+| 4.8 | ✏️ `top_tb.sv`, `env/*`, `tests/minisoc_base_test.sv`, `Makefile` | Mesmo roteiro da 1.8–1.10: `spi_if` no top_tb (substitui os `logic` fixos), `spi_vif` no env_cfg, `spi_agt` no env. | — |
 
 ✅ **Pronto quando:** `make compile` passa e os testes anteriores continuam PASS.
 
@@ -197,7 +204,7 @@ Regras do protocolo (Block Guide 5; RTL `minisoc_spi.sv`):
 | 5.1 | 🆕 `sequences/spi/spi_write_seq.sv` | `addr`, `data` → 1 WRITE. | Bloco básico. |
 | 5.2 | 🆕 `sequences/spi/spi_read_seq.sv` | `addr` → 1 READ, devolve `rdata`. | Bloco básico. |
 | 5.3 | ✏️ `sequences/minisoc_seq_pkg.sv` | Inclui as sequences SPI. | — |
-| 5.4 | 🆕 `tests/minisoc_rst_default_test.sv` | **T-RST-DEFAULT:** após o reset, lê todos os registradores pelo SPI. | Prova que o SPI funciona de ponta a ponta e que o DUT sai do reset com os valores da spec. |
+| 5.4 | 🆕 `tests/minisoc_rst_default_test.sv` | **T-RST-DEFAULT:** após o reset, lê 0x00–0x0F pelo SPI e imprime cada valor. O `spi_scoreboard` compara; `check_phase` exige 16 comparações. | Prova que o SPI funciona de ponta a ponta e que o DUT sai do reset com os valores da spec. |
 
 ✅ **Pronto quando:** o log mostra `VERSION = 0x0001_0100` lido pelo SPI.
 
@@ -205,9 +212,9 @@ Regras do protocolo (Block Guide 5; RTL `minisoc_spi.sv`):
 
 | # | Arquivo | O que contém | Por quê |
 |---|---|---|---|
-| 6.1 | 🆕 `env/spi_scoreboard.sv` | Um "espelho" dos 16 registradores. WRITE → atualiza (respeitando máscaras e read-only); READ → compara e dá `UVM_ERROR` se divergir. `report_phase` com o total. | Checagem local do SPI. |
+| 6.1 | 🆕 `env/spi_scoreboard.sv` | Um "espelho" dos 16 registradores. WRITE → atualiza (respeitando máscaras e read-only); READ → compara e dá `UVM_ERROR` se divergir. Status (0x0C, 0x0F) vêm do hardware: o esperado é lido do `probe_if`. Quando `rst_n` cai, o espelho volta aos valores de reset. `report_phase` com o total. | Checagem local do SPI. |
 | 6.2 | ✏️ `env/minisoc_env.sv` | Cria `spi_scb` e liga `spi_agt.mon.ap → spi_scb`. | — |
-| 6.3 | 🆕 `tests/minisoc_spi_reg_test.sv` | **T-SPI-REG:** escreve e lê de volta todos os endereços com valores fixos (0, `0xFFFFFFFF`, walking-1) e aleatórios. | Exercita todas as regras do espelho. |
+| 6.3 | 🆕 `tests/minisoc_spi_reg_test.sv` | **T-SPI-REG:** para 0x00–0x0F, 0x10, 0x20 e 0x3E: escreve e lê de volta 0, `0xFFFFFFFF`, `0xA5A5A5A5`, `0x1`, `0x80000000` e um aleatório. | Exercita todas as regras do espelho. |
 
 Regras do espelho (lidas no RTL):
 
@@ -225,6 +232,9 @@ Regras do espelho (lidas no RTL):
 > **Cuidado no T-SPI-REG:** escrever `START = 1` ou `PLL_ENABLE = 1` dispara
 > comportamento no DUT. O teste escreve `AES_CONTROL` sempre com `START = 0` e,
 > em `SYSTEM_CONTROL`, mantém `PLL_ENABLE = 0` (o PLL é testado na Etapa 7).
+> **Consequência:** a regra "START sempre lê 0" ainda não é exercitada
+> (confirmado com falha provocada). Ela entra na Etapa 7 / dezembro, quando
+> START = 1 for escrito de propósito.
 
 ✅ **Pronto quando:** T-RST-DEFAULT e T-SPI-REG passam com 0 erros.
 

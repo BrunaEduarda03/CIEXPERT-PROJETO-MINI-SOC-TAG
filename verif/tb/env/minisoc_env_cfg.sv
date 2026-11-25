@@ -11,6 +11,7 @@ class minisoc_env_cfg extends uvm_object;
   rst_cfg rst;        // rst_n
 
   virtual mem_if           mem_vif;     // MEMORY DATA
+  virtual spi_if           spi_vif;     // SPI
   virtual minisoc_probe_if probe_vif;
 
   function new(string name = "minisoc_env_cfg");

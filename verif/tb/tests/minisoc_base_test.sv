@@ -29,6 +29,8 @@ class minisoc_base_test extends uvm_test;
       `uvm_fatal("TEST_NOVIF", "rst_vif nao encontrado no config_db")
     if (!uvm_config_db#(virtual mem_if)::get(this, "", "mem_vif", env_cfg.mem_vif))
       `uvm_fatal("TEST_NOVIF", "mem_vif nao encontrado no config_db")
+    if (!uvm_config_db#(virtual spi_if)::get(this, "", "spi_vif", env_cfg.spi_vif))
+      `uvm_fatal("TEST_NOVIF", "spi_vif nao encontrado no config_db")
     if (!uvm_config_db#(virtual minisoc_probe_if)::get(this, "", "probe_vif", env_cfg.probe_vif))
       `uvm_fatal("TEST_NOVIF", "probe_vif nao encontrado no config_db")
 
