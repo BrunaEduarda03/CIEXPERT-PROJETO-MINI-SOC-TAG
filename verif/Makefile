@@ -4,6 +4,7 @@
 #   make                      compila e roda o teste default (smoke)
 #   make compile              so compila
 #   make run TEST=<teste> SEED=<n> VERBOSITY=UVM_HIGH WAVES=fsdb|vcd
+#   make regress              compila e roda todos os testes com 3 seeds
 #   make verdi                abre o Verdi com as waves FSDB do ultimo run
 #   make clean
 #==============================================================================
@@ -83,7 +84,12 @@ endif
 RUN_LOG := $(LOG_DIR)/$(TEST)_$(SEED).log
 
 #------------------------------------------------------------------------------
-.PHONY: all compile run verdi clean help
+.PHONY: all compile run regress verdi clean help
+
+# Testes da regressao (minisoc_pll_reenable_test fica fora: reproduz o bug OPEN-01)
+REGRESS_TESTS := minisoc_smoke_test minisoc_mem_rw_test minisoc_rst_default_test \
+                 minisoc_spi_reg_test minisoc_pll_bringup_test minisoc_mem_owner_test
+REGRESS_SEEDS := 1 2 3
 
 all: compile run
 
@@ -101,6 +107,17 @@ run: | $(LOG_DIR)
 		echo "==> FAIL: $(TEST) seed=$(SEED)  log: $(RUN_LOG)"; exit 1; \
 	fi
 
+regress: compile
+	@: > $(LOG_DIR)/regress.txt
+	@for t in $(REGRESS_TESTS); do for s in $(REGRESS_SEEDS); do \
+		$(MAKE) --no-print-directory run TEST=$$t SEED=$$s > /dev/null 2>&1 \
+			&& r=PASS || r=FAIL; \
+		printf "%-28s seed=%-3s %s\n" $$t $$s $$r | tee -a $(LOG_DIR)/regress.txt; \
+	done; done
+	@echo "------------------------------------------------"
+	@echo "PASS: $$(grep -c PASS $(LOG_DIR)/regress.txt)  FAIL: $$(grep -c FAIL $(LOG_DIR)/regress.txt)"
+	@! grep -q FAIL $(LOG_DIR)/regress.txt
+
 verdi:
 	cd $(SIM_DIR) && verdi -dbdir simv.daidir -ssf waves.fsdb &
 
@@ -108,4 +125,4 @@ clean:
 	rm -rf $(SIM_DIR)
 
 help:
-	@sed -n '2,9p' Makefile
+	@sed -n '2,10p' Makefile

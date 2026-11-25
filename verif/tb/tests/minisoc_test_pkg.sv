@@ -17,4 +17,7 @@ package minisoc_test_pkg;
   `include "minisoc_mem_rw_test.sv"
   `include "minisoc_rst_default_test.sv"
   `include "minisoc_spi_reg_test.sv"
+  `include "minisoc_pll_bringup_test.sv"
+  `include "minisoc_pll_reenable_test.sv"
+  `include "minisoc_mem_owner_test.sv"
 endpackage : minisoc_test_pkg

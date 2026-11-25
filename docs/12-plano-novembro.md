@@ -1,7 +1,7 @@
 # 12 — Plano de execução do checkpoint de novembro (prazo 30/11/2026)
 
-> **Status:** Parte 1 (MEMORY DATA, Etapas 1–3) ✅ · Parte 2 (SPI, Etapas 4–6) ✅ ·
-> Parte 3 pendente. Todo código novo segue as **Regras de código** da seção 5.
+> **Status:** Partes 1, 2 e 3 (código, Etapas 1–8) ✅ · `make regress` 18/18 PASS.
+> Falta: VPLAN v2, evidências de novembro e slides (seção 8). Todo código novo segue as **Regras de código** da seção 5.
 
 **Em uma frase:** em outubro o testbench aprendeu a *ligar* o DUT (clock e
 reset). Agora ele precisa aprender a *conversar* com o DUT — pela **MEMORY
@@ -240,46 +240,56 @@ Regras do espelho (lidas no RTL):
 
 ---
 
-### PARTE 3 — Integração e configuração do DUT
+### PARTE 3 — Integração e configuração do DUT ✅ concluída
+
+> `make regress`: 6 testes × 3 seeds = **18/18 PASS**. Falha provocada no
+> `spi_driver` (sclk a 33 MHz) → A-09 dispara e o teste dá FAIL.
+> **Bug real encontrado (OPEN-01):** desligar o PLL pelo SPI deixa `sys_rst_n = 1`
+> com `PLL_LOCKED = 0` (o `sys_reset_pipe` só limpa numa borda de `sys_clk`, que
+> já parou). A-02a dispara. Reproduzido por `minisoc_pll_reenable_test`, que fica
+> **fora da regressão** até o RTL ser corrigido. Levar ao projetista.
 
 #### Etapa 7 — Configuração básica + ownership
 
 | # | Arquivo | O que contém | Por quê |
 |---|---|---|---|
 | 7.1 | 🆕 `sequences/minisoc_cfg_seq.sv` | Via SPI: lê `VERSION` → escreve `PLL_DIV_SEL` + `PLL_ENABLE = 1` → lê `SYSTEM_STATUS` em loop até `PLL_LOCKED = 1` (com **limite de tentativas** → `UVM_FATAL`) → ajusta `MEM_SEL_AES`. | É o item "configuração básica do DUT": passos 1–10 do modelo de programação (Block Guide 9). Em dezembro só se acrescenta "START → esperar DONE". |
-| 7.2 | 🆕 `tests/minisoc_pll_bringup_test.sv` | **T-PLL-BRINGUP (básico):** roda 7.1 nos 4 divisores (/1, /2, /4, /8), desligando o PLL entre eles. | Mostra o DUT sendo configurado de verdade. O limite evita simulação travada se o PLL nunca travar. |
-| 7.3 | ✏️ `tests/minisoc_mem_rw_test.sv` | **T-MEM-RW (parte 2, ownership):** via SPI põe `MEM_SEL_AES = 1`, tenta escrever pela memória, volta para 0 e confere que **o valor antigo continuou lá**. | Junta os dois VIPs num teste só (REQ-MEM-03: um dono por vez). É o caminho de dezembro: SPI configura, memória carrega/lê. |
+| 7.2 | 🆕 `tests/minisoc_pll_bringup_test.sv` | **T-PLL-BRINGUP:** roda 7.1 nos 4 divisores e **mede o `sys_clk`** pelo probe (500, 1000, 2000, 4000 ps). Entre um divisor e outro aplica **reset** (desligar o PLL expõe o OPEN-01). | Mostra o DUT sendo configurado de verdade. O limite evita simulação travada se o PLL nunca travar. |
+| 7.2b | 🆕 `tests/minisoc_pll_reenable_test.sv` | **T-PLL-REENABLE (OPEN-01):** liga, desliga e religa o PLL pelo SPI. **Hoje FALHA** (A-02a). | Prova o bug com um teste de 30 linhas; vira PASS quando o RTL for corrigido. |
+| 7.3 | 🆕 `tests/minisoc_mem_owner_test.sv` | **T-MEM-OWNER:** grava 3 endereços pela memória; `minisoc_cfg_seq` com `MEM_SEL_AES = 1` (PLL travado); tenta gravar `0xDEAD…`; devolve a memória (`MEM_SEL_AES = 0`) e lê: **o valor antigo continuou lá**. Teste separado para o T-MEM-RW continuar sem SPI (regra 5). | Junta os dois VIPs num teste só (REQ-MEM-03: um dono por vez). É o caminho de dezembro: SPI configura, memória carrega/lê. |
 
-✅ **Pronto quando:** `PLL_LOCKED = 1` nos 4 divisores e T-MEM-RW passa com ownership.
+✅ **Pronto quando:** `PLL_LOCKED = 1` nos 4 divisores e T-MEM-OWNER passa.
 
 #### Etapa 8 — Assertions e regressão
 
 | # | Arquivo | O que contém | Por quê |
 |---|---|---|---|
 | 8.1 | ✏️ `top_assertions.sv` | **A-09:** com `cs_n = 0`, período de `sclk` ≥ 40 ns. **A-10:** com `MEM_SEL_AES = 0`, endereço/dado/`wr_en` sem X/Z na subida de `mem_clk`. | Checagem com pouco código. A-09 vigia o *próprio* testbench. |
-| 8.2 | ✏️ `Makefile` | `make regress`: roda todos os testes com 3 seeds e imprime tabela PASS/FAIL. | Evidência fácil; a regressão só é exigida em dezembro, então é ponto a favor. |
-| 8.3 | 🆕 `tests/minisoc_spi_abort_test.sv` *(opcional)* | **T-SPI-ABORT:** frames interrompidos no meio + frames válidos; nenhum registrador pode mudar. | Robustez, se sobrar tempo. |
+| 8.2 | ✏️ `Makefile` | `make regress`: compila uma vez, roda 6 testes × seeds 1, 2, 3, imprime a tabela e grava `sim/logs/regress.txt`. | Evidência fácil; a regressão só é exigida em dezembro, então é ponto a favor. |
+| 8.3 | *(não feito)* `tests/minisoc_spi_abort_test.sv` | **T-SPI-ABORT:** frames interrompidos no meio. Precisaria de um modo "frame parcial" no driver; fica para dezembro. O monitor já avisa frame abortado. | Opcional. |
 
 ### Fica para dezembro (registrar no VPLAN v2)
 
-Monitor/checker completo do PLL (período do `sys_clk`, janela de lock), virtual
-sequencer, covergroups e tudo do AES (monitor, refmod, scoreboard).
+Monitor/checker completo do PLL (janela de lock), virtual sequencer, covergroups,
+tudo do AES (monitor, refmod, scoreboard), T-SPI-ABORT, a regra "START sempre
+lê 0" e a correção/reteste do OPEN-01.
 
 ---
 
 ## 6. Resumo
 
-**~24 arquivos novos · 8 alterados** (`top_tb`, `env_cfg`, `env`, `env_pkg`,
+**27 arquivos novos · 8 alterados** (`top_tb`, `env_cfg`, `env`, `env_pkg`,
 `base_test`, `test_pkg`, `Makefile`, `top_assertions`).
 
 | Teste | Etapa | Verifica | Checker |
 |---|---|---|---|
 | `minisoc_smoke_test` | — | clock + reset (já existe) | SVA A-01 |
-| `minisoc_mem_rw_test` | 2–3, 7 | memória + ownership | mem_scoreboard |
+| `minisoc_mem_rw_test` | 2–3 | memória (sem SPI) | mem_scoreboard |
 | `minisoc_rst_default_test` | 5 | valores de reset via SPI | spi_scoreboard |
 | `minisoc_spi_reg_test` | 6 | todos os registradores | spi_scoreboard |
-| `minisoc_pll_bringup_test` | 7 | PLL trava nos 4 divisores | limite + leitura |
-| `minisoc_spi_abort_test` | 8 (opcional) | frame interrompido | spi_scoreboard |
+| `minisoc_pll_bringup_test` | 7 | PLL trava e `sys_clk` certo nos 4 divisores | medição + SVA |
+| `minisoc_mem_owner_test` | 7 | um dono por vez (REQ-MEM-03) | mem_scoreboard |
+| `minisoc_pll_reenable_test` | 7 | OPEN-01 — **hoje FALHA** (fora da regressão) | SVA A-02a |
 
 **Prioridade se o tempo acabar:** Etapas 1–3 (memória) → 4–6 (SPI) → 7 → 8.
 Memória + SPI com scoreboard é o núcleo; o resto é bônus.
