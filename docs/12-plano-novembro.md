@@ -1,71 +1,65 @@
-# 12 — O que fazer até 30/11/2026 (checkpoint de novembro)
+# 12 — Plano de execução do checkpoint de novembro (prazo 30/11/2026)
 
-Montado a partir de uma varredura em `docs/especificacao/` (Plano de Projeto e
-Avaliação, Block Guide MiniSoC AES v1.0.0, Plano Dia 3), `docs/templates/`, no
-VPLAN v1 (`verif/doc/CI-Expert_Fase2_Verification_Plan_v1.docx`) e no código
-atual de `verif/tb/`.
+> **Status: AGUARDANDO APROVAÇÃO** (seção 9). Execução prevista: **hoje, numa
+> sessão só**, etapa por etapa. Nada abaixo foi implementado ainda.
 
-Hoje: **ter 24/11**. Prazo: **seg 30/11**. São **6 dias**.
+**Em uma frase:** em outubro o testbench aprendeu a *ligar* o DUT (clock e
+reset). Agora ele precisa aprender a *conversar* com o DUT — pela **MEMORY
+DATA** (dados) e pelo **SPI** (configuração) — e a *conferir sozinho* se as
+respostas estão certas.
 
-
-
-## 1. O que o plano de projeto exige para novembro
-
-| Campo | Texto oficial (Plano de Projeto, seção 5) |
-|---|---|
-| Foco técnico | VIPs das interfaces externas e configuração. |
-| Entrega obrigatória | VIP CLK, VIP RESET, **VIP SPI**, **VIP MEMORY DATA**; **configuração básica do DUT**; **atualização do VPLAN**; **primeiros testes de interface**. |
-| Checkpoint individual | Demonstrar **transações SPI e de dados (MEMORY DATA)**, **monitores e checagens locais**; **justificar escolhas de arquitetura**. |
-
-No seu VPLAN v1 isso corresponde às fases **P2 (SPI + PLL)** e **P3 (MEMORY DATA)**.
-
-**"Pronto" para o marco (seção 5.1 do plano):**
-- versionado e executável (`make compile run` passando);
-- evidência objetiva: logs, waves, resultados de regressão;
-- checagem automática em tudo que for possível (scoreboard/assertion, não "olhar a wave");
-- VPLAN atualizado: o que foi feito, o que falta, gaps;
-- você consegue explicar arquitetura, problemas e próximos passos.
-
-**Como o checkpoint é avaliado (seção 6.1):** entrega técnica 50% · domínio e
-justificativas 25% · evidências e reprodutibilidade 15% · organização da
-apresentação 10%.
+Fontes: Plano de Projeto (seção 5), Block Guide MiniSoC AES (seções 3, 5, 6, 7, 9),
+Plano Dia 3, VPLAN v1, RTL (`minisoc_memory.sv`, `minisoc_spi.sv`) e o testbench
+do projetista em `frontend/tb/minisoc_top_tb.sv` (tasks `mem_write`, `mem_read`,
+`spi_transfer`, `spi_read` — ótima referência de protocolo).
 
 ---
 
-## 2. Onde você está hoje
+## 1. O que o marco pede
 
-| Item | Status | Onde |
-|---|---|---|
-| VIP CLK (`clk_if/cfg/driver/agent/pkg`) | ✅ feito em out. (há alterações em `clk_driver.sv`/`clk_if.sv` ainda não commitadas) | `verif/tb/agents/clk/` |
-| VIP RESET | ✅ feito | `verif/tb/agents/rst/` |
-| `minisoc_env`, `env_cfg`, `probe_if` | ✅ só clk + rst | `verif/tb/env/`, `verif/tb/minisoc_probe_if.sv` |
-| `top_assertions.sv` (A-01, A-02a, A-03) | ✅ | `verif/tb/` |
-| `minisoc_base_test`, `minisoc_smoke_test` | ✅ PASS | `verif/tb/tests/` |
-| Makefile (`TEST`, `SEED`, `WAVES`) | ✅ — mas roda **um** teste por vez, sem alvo de regressão | `verif/Makefile` |
-| SPI em `top_tb.sv` | ❌ sinais fixos em repouso (`spi_cs_n = 1`) | `verif/tb/top_tb.sv` |
-| MEMORY DATA em `top_tb.sv` | ❌ sinais fixos em 0 | `verif/tb/top_tb.sv` |
-| `verif/tb/sequences/` | ❌ vazio | |
-| VPLAN | v1 (outubro) — versões VCS/UVM ainda "[a registrar]", tudo `PLANEJADO` | `verif/doc/` |
-| Evidências de outubro | ⚠️ `verif/doc/evidencias/` **não existe neste repositório** (o doc 09 diz que foi salvo lá) — confira se ficou em outra cópia | |
+| Entregar | Demonstrar na apresentação |
+|---|---|
+| VIP MEMORY DATA e VIP SPI (clk/rst já feitos) | transações de memória e SPI acontecendo |
+| configuração básica do DUT | monitores reconstruindo essas transações |
+| VPLAN atualizado (v2) | checagens automáticas (scoreboard / assertion) |
+| primeiros testes de interface | **por que** a arquitetura é assim |
 
-### Pendências de outubro (feche primeiro — 1 h no máximo)
-- [x] `clk_if.sv` (só comentário) staged para commit.
-- [x] `clk_driver.sv`: o `connect_phase` (que faz `vif = cfg.vif`) estava
-      comentado, o que deixaria `vif` nulo. Descomentado (arquivo voltou a ser
-      igual ao último commit). `make compile run WAVES=fsdb` em 24/11:
-      **PASS**, `UVM_ERROR = 0`, `UVM_FATAL = 0`.
-- [x] `verif/doc/evidencias/outubro/` recuperado da cópia em
-      `~/minisoc-tag-v1.0/` (log do smoke test com `TEST PASSED` e `waves.fsdb`
-      de 29/10). Os dois arquivos estão no `.gitignore` (`*.log`, `*.fsdb`) e
-      foram adicionados com `git add -f`.
-- [x] Print do Verdi: `verif/doc/evidencias/outubro/verdi_clk_rst.png`, gerado
-      do `waves.fsdb` de 29/10 (Verdi em modo headless via `xvfb-run`), 0–40 ns,
-      cursor em 20 ns na liberação do reset. Os nomes dos sinais foram rotulados
-      na imagem porque a coluna de nomes do nWave fica estreita no modo headless.
-- [ ] `docs/especificacao/` e `docs/templates/` estão staged. Os PDFs do
-      Plano de Projeto e do Block Guide são marcados **CONFIDENCIAL**: só faça
-      push se o repositório `BrunaEduarda03/ciexpert` for **privado**.
-- [ ] Feedback do checkpoint de outubro: _anotar aqui o que foi pedido_ e incluir no cronograma.
+Avaliação: entrega técnica 50% · saber explicar 25% · evidências 15% · apresentação 10%.
+
+---
+
+## 2. Onde você está
+
+| Já existe ✅ | Falta ❌ |
+|---|---|
+| `agents/clk/`, `agents/rst/` (if, cfg, driver, agent, pkg) | `agents/mem/`, `agents/spi/` |
+| `env/` com env, env_cfg, env_pkg (só clk + rst) | scoreboards |
+| `tests/` com base_test e smoke_test | `sequences/` está vazio |
+| `top_tb.sv`, `top_assertions.sv`, `minisoc_probe_if.sv` | MEMORY e SPI no `top_tb` estão **parados** (sinais fixos) |
+| Makefile (`TEST`, `SEED`, `WAVES`) | alvo de regressão |
+| Evidências de outubro | VPLAN v2 |
+
+---
+
+## 3. Como o testbench vai ficar
+
+```
+                         minisoc_base_test
+                                │
+                           minisoc_env
+   ┌──────────┬──────────┬──────┴──────────┬───────────────────┐
+ref_clk_agt mem_clk_agt rst_agt       mem_agt (NOVO)       spi_agt (NOVO)
+ (driver)    (driver)   (driver)   sqr → driver            sqr → driver
+                                         monitor ──┐            monitor ──┐
+                                                   ▼                      ▼
+                         probe_if ──► mem_scoreboard (NOVO)   spi_scoreboard (NOVO)
+                      (MEM_SEL_AES)
+```
+
+- **driver** = transforma uma transação ("escreva 0xCAFE no endereço 5") em sinais no fio.
+- **monitor** = faz o caminho inverso: olha os fios e reconstrói a transação.
+- **scoreboard** = compara o que o monitor viu com o que *deveria* acontecer.
+  É aqui que mora a "checagem automática".
 
 ---
 
@@ -177,134 +171,170 @@ Nomes e IDs já definidos no VPLAN v1, seção 8:
 
 | Teste | O que faz | Checker | Prioridade |
 |---|---|---|---|
-| `minisoc_smoke_test` (T-SMOKE) | já existe — manter passando | CHK-01, A-01 | mantém |
-| `minisoc_rst_default_test` (T-RST-DEFAULT) | reset + leitura via SPI de **todos** os registradores, `VERSION`, `SYSTEM_STATUS` | CHK-01, CHK-02 | 1 |
-| `minisoc_spi_reg_test` (T-SPI-REG) | escrita/leitura de todos os endereços (R/W, RO, reservados, não mapeados), dados dirigidos + aleatórios | CHK-02 | 1 |
-| `minisoc_mem_rw_test` (T-MEM-RW) | escrita/leitura 0, 1023, limites de bloco, aleatórios; padrões; **acesso com `MEM_SEL_AES = 1` não tem efeito** | CHK-04 | 1 |
-| `minisoc_pll_bringup_test` (T-PLL-BRINGUP, versão básica) | habilita PLL com cada divisor e espera `PLL_LOCKED` via SPI | timeout + leitura | 2 |
-| `minisoc_spi_abort_test` (T-SPI-ABORT) | frames abortados intercalados com válidos | CHK-02 | 3 (se sobrar tempo) |
+| 3.1 | 🆕 `env/mem_scoreboard.sv` | Um array associativo que imita a RAM. Escrita com `MEM_SEL_AES = 0` → atualiza; com `MEM_SEL_AES = 1` → **não** atualiza. Leitura de endereço já escrito → compara e dá `UVM_ERROR` se divergir; nunca escrito → ignora. `MEM_SEL_AES` vem do `probe_if`. `report_phase`: "N leituras comparadas, M erros". | É a "checagem local" que o marco pede. Sem ela o teste só *mostra* valores; com ela, o teste *julga*. Já nasce pronto para o ownership (Etapa 7). |
+| 3.2 | ✏️ `env/minisoc_env.sv` | Cria `mem_scb`, liga `mem_agt.mon.ap → mem_scb`, entrega o `probe_vif`. | É o fio de dados entre a testemunha (monitor) e o juiz (scoreboard). |
 
-### 3.8 Assertions novas (baratas e contam como "checagem local")
-
-Já planejadas no VPLAN, seção 6:
-- **A-09** — período de `spi_sclk` ≥ 40 ns e `RSV = 0` com `cs_n = 0` (checa o próprio TB).
-- **A-10** — `mem_i_addr/wr_en/data` sem X/Z na borda de `mem_clk` com `MEM_SEL_AES = 0`.
-- (opcional) **A-04** — `o_locked` sobe entre 8 e 31 ciclos após o enable.
-
-### 3.9 Regressão mínima
-
-Alvo `make regress` que roda a lista de testes acima com 2–3 seeds cada e
-imprime um resumo PASS/FAIL. Não precisa ser sofisticado — o plano de dezembro
-pede "primeira regressão", então ter isso já em novembro é ponto a favor.
-
-### 3.10 O que pode ficar para dezembro (e registrar no VPLAN)
-
-O VPLAN v1 coloca `pll_monitor` + `pll_checker` (CHK-03) em P2. O plano de
-projeto **não** cita PLL no marco de novembro. Se o tempo apertar, entregue
-só o bring-up básico via SPI (3.5) e mova `pll_monitor`/`pll_checker`/coverage
-para dezembro — **registrando o replanejamento no VPLAN v2**. Também ficam
-para depois: virtual sequencer, covergroups, `aes_monitor`, refmod/scoreboard AES.
+✅ **Pronto quando:** T-MEM-RW passa com o scoreboard ativo e 0 erros.
 
 ---
 
-## 4. Atualização do VPLAN (v1 → v2)
+### PARTE 2 — SPI
 
-Use o próprio `CI-Expert_Fase2_Verification_Plan_v1.docx` (feito a partir do
-template `docs/templates/CI-Expert_Fase2_Verification_Plan.docx`) e salve como
-`verif/doc/CI-Expert_Fase2_Verification_Plan_v2.docx`.
+Regras do protocolo (Block Guide 5; RTL `minisoc_spi.sv`):
+- frame de **40 bits**, MSB primeiro: `{RWb, ADDR[5:0], RSV=0, DATA[31:0]}`;
+- **Mode 0:** `sclk` parado em 0; MOSI muda com `sclk` baixo; o DUT lê na **subida**;
+- **escrita** = 1 frame (`RWb = 0`);
+- **leitura** = 2 frames: pedido (`RWb = 1`, endereço) + frame NOP
+  (`RWb = 0`, endereço `0x3F`). O dado sai no MISO durante o NOP, bits [31:0];
+- `sclk` ≤ 25 MHz → padrão 20 MHz (meio período de 25 ns); intervalo entre frames
+  para a sincronização interna (CDC).
 
-- [ ] Capa / histórico: **V2.0 — checkpoint de novembro (Nov/2026)**.
-- [ ] Tabela 1.2: VCS `X-2025.06-SP2_Full64` e `UVM-1.2` (hoje "[a registrar]").
-- [ ] Seção 4 (arquitetura): figura atualizada (`tb_arch.svg`) com `spi_agent`, `mem_agent`, `spi_scoreboard`, `mem_scoreboard`.
-- [ ] Seção 4: registrar as decisões de novembro (ver seção 6 deste doc), inclusive a do *valid* do `mem_if`.
-- [ ] Seção 4.2 (bring-up phases): P0/P1 = **concluído**, P2/P3 = **concluído / em andamento** conforme o real; se o `pll_checker` for para dezembro, dizer isso.
-- [ ] Pontos em aberto: **OPEN-03** (VERSION) com o valor lido; OPEN-01 se der para observar no bring-up do PLL.
-- [ ] Seção 8: nome real do arquivo de cada teste.
-- [ ] Seção 9 (rastreabilidade): mudar status de F01, F08, F09, F12, F13 (e F05 se fizer o PLL) de `PLANEJADO` para `EM ANDAMENTO`/`IMPLEMENTADO`, com o log que é a evidência.
-- [ ] Gaps conhecidos: listar o que ficou para dezembro.
+#### Etapa 4 — VIP SPI
 
-Os templates `Verification_Guide` e `Verification_Report` são para fevereiro.
-Se sobrar 30 min, crie só o esqueleto do Guide com "como compilar/rodar" —
-você já tem o conteúdo em [07-makefile-vcs.md](07-makefile-vcs.md).
+| # | Arquivo | O que contém | Por quê |
+|---|---|---|---|
+| 4.1 | 🆕 `agents/spi/spi_if.sv` | `sclk`, `cs_n`, `mosi`, `miso`; repouso `cs_n = 1`, `sclk = 0`. | Conector físico, como o `mem_if`. |
+| 4.2 | 🆕 `agents/spi/spi_item.sv` | `op` (WRITE/READ), `addr[5:0]`, `data[31:0]`, `rdata[31:0]`; `convert2string()`. | A "palavra" do SPI: "ler o registrador X". |
+| 4.3 | 🆕 `agents/spi/spi_cfg.sv` | `vif`, `is_active`, `sclk_half_ns` (25), `gap_ns`; `is_valid()` recusa `sclk` > 25 MHz. | Parâmetros fora do código e proteção contra violar a spec. |
+| 4.4 | 🆕 `agents/spi/spi_driver.sv` | Task `transfer(tx40, rx40)` (como a `spi_transfer` do projetista). WRITE chama 1 vez; READ chama 2 vezes e guarda `rx[31:0]` em `rdata`. Devolve com `put_response()`. | É quem "fala SPI" e **esconde o frame NOP** do teste. `put_response` foi decisão do Plano Dia 3. |
+| 4.5 | 🆕 `agents/spi/spi_monitor.sv` | Na subida de `sclk` guarda MOSI e MISO; na subida de `cs_n` fecha o frame. Frame ≠ 40 bits → aviso "abortado". Junta pedido + NOP numa só transação READ. Publica no `analysis_port`. | Testemunha independente. Juntar os 2 frames mantém a abstração do lado de quem observa. |
+| 4.6 | 🆕 `agents/spi/spi_agent.sv` | Sequencer + driver + monitor. | Igual ao `mem_agent`. |
+| 4.7 | 🆕 `agents/spi/spi_pkg.sv` | Pacote com 4.2–4.6. | — |
+| 4.8 | ✏️ `top_tb.sv`, `env/*`, `tests/minisoc_base_test.sv`, `Makefile` | Mesmo roteiro da 1.8–1.10, agora para `spi_if` / `spi_agt`. | — |
+
+✅ **Pronto quando:** `make compile` passa e os testes anteriores continuam PASS.
+
+#### Etapa 5 — Sequences SPI + teste de reset
+
+| # | Arquivo | O que contém | Por quê |
+|---|---|---|---|
+| 5.1 | 🆕 `sequences/spi/spi_write_seq.sv` | `addr`, `data` → 1 WRITE. | Bloco básico. |
+| 5.2 | 🆕 `sequences/spi/spi_read_seq.sv` | `addr` → 1 READ, devolve `rdata`. | Bloco básico. |
+| 5.3 | ✏️ `sequences/minisoc_seq_pkg.sv` | Inclui as sequences SPI. | — |
+| 5.4 | 🆕 `tests/minisoc_rst_default_test.sv` | **T-RST-DEFAULT:** após o reset, lê todos os registradores pelo SPI. | Prova que o SPI funciona de ponta a ponta e que o DUT sai do reset com os valores da spec. |
+
+✅ **Pronto quando:** o log mostra `VERSION = 0x0001_0100` lido pelo SPI.
+
+#### Etapa 6 — Checagem local do SPI
+
+| # | Arquivo | O que contém | Por quê |
+|---|---|---|---|
+| 6.1 | 🆕 `env/spi_scoreboard.sv` | Um "espelho" dos 16 registradores. WRITE → atualiza (respeitando máscaras e read-only); READ → compara e dá `UVM_ERROR` se divergir. `report_phase` com o total. | Checagem local do SPI. |
+| 6.2 | ✏️ `env/minisoc_env.sv` | Cria `spi_scb` e liga `spi_agt.mon.ap → spi_scb`. | — |
+| 6.3 | 🆕 `tests/minisoc_spi_reg_test.sv` | **T-SPI-REG:** escreve e lê de volta todos os endereços com valores fixos (0, `0xFFFFFFFF`, walking-1) e aleatórios. | Exercita todas as regras do espelho. |
+
+Regras do espelho (lidas no RTL):
+
+| Endereço | Registro | Reset | Leitura |
+|---|---|---|---|
+| 0x00–0x09 | KEY, IV, COUNTER | 0 | 32 bits, o que foi escrito |
+| 0x0A | NUM_BLOCKS | 1 | só bits [8:0] |
+| 0x0B | AES_CONTROL | 0 | bits [4:1] (MODE, DECRYPT); **START sempre lê 0** |
+| 0x0C | AES_STATUS | 0 | read-only |
+| 0x0D | VERSION | `0x0001_0100` | read-only, constante |
+| 0x0E | SYSTEM_CONTROL | `0b1100` | bits [3:0]: `PLL_DIV_SEL`, `PLL_ENABLE`, `MEM_SEL_AES` |
+| 0x0F | SYSTEM_STATUS | 0 | read-only (`PLL_LOCKED`) |
+| 0x10–0x3E | não mapeados | — | lê 0, escrita ignorada |
+
+> **Cuidado no T-SPI-REG:** escrever `START = 1` ou `PLL_ENABLE = 1` dispara
+> comportamento no DUT. O teste escreve `AES_CONTROL` sempre com `START = 0` e,
+> em `SYSTEM_CONTROL`, mantém `PLL_ENABLE = 0` (o PLL é testado na Etapa 7).
+
+✅ **Pronto quando:** T-RST-DEFAULT e T-SPI-REG passam com 0 erros.
 
 ---
 
-## 5. Evidências para a apresentação
+### PARTE 3 — Integração e configuração do DUT
 
-Salvar em `verif/doc/evidencias/novembro/`:
+#### Etapa 7 — Configuração básica + ownership
 
-- [ ] log de cada teste da 3.7 com `TEST PASSED`, `UVM_ERROR: 0`;
-- [ ] saída do `make regress` (tabela PASS/FAIL por teste × seed);
-- [ ] print do Verdi de **um frame SPI WRITE** e **um READ (request + NOP)** com `sclk/cs_n/mosi/miso`;
-- [ ] print do Verdi de **escrita e leitura** na MEMORY DATA mostrando a latência de 1 ciclo;
-- [ ] trecho de log do `spi_monitor`/`mem_monitor` imprimindo a transação reconstruída (`convert2string`);
-- [ ] trecho de log do scoreboard: "N leituras comparadas, 0 erros";
-- [ ] **uma falha provocada de propósito** (ex.: modelo esperando valor errado) mostrando o scoreboard pegando o erro — prova de que a checagem funciona;
-- [ ] print de `SYSTEM_STATUS.PLL_LOCKED = 1` lido via SPI.
+| # | Arquivo | O que contém | Por quê |
+|---|---|---|---|
+| 7.1 | 🆕 `sequences/minisoc_cfg_seq.sv` | Via SPI: lê `VERSION` → escreve `PLL_DIV_SEL` + `PLL_ENABLE = 1` → lê `SYSTEM_STATUS` em loop até `PLL_LOCKED = 1` (com **limite de tentativas** → `UVM_FATAL`) → ajusta `MEM_SEL_AES`. | É o item "configuração básica do DUT": passos 1–10 do modelo de programação (Block Guide 9). Em dezembro só se acrescenta "START → esperar DONE". |
+| 7.2 | 🆕 `tests/minisoc_pll_bringup_test.sv` | **T-PLL-BRINGUP (básico):** roda 7.1 nos 4 divisores (/1, /2, /4, /8), desligando o PLL entre eles. | Mostra o DUT sendo configurado de verdade. O limite evita simulação travada se o PLL nunca travar. |
+| 7.3 | ✏️ `tests/minisoc_mem_rw_test.sv` | **T-MEM-RW (parte 2, ownership):** via SPI põe `MEM_SEL_AES = 1`, tenta escrever pela memória, volta para 0 e confere que **o valor antigo continuou lá**. | Junta os dois VIPs num teste só (REQ-MEM-03: um dono por vez). É o caminho de dezembro: SPI configura, memória carrega/lê. |
+
+✅ **Pronto quando:** `PLL_LOCKED = 1` nos 4 divisores e T-MEM-RW passa com ownership.
+
+#### Etapa 8 — Assertions e regressão
+
+| # | Arquivo | O que contém | Por quê |
+|---|---|---|---|
+| 8.1 | ✏️ `top_assertions.sv` | **A-09:** com `cs_n = 0`, período de `sclk` ≥ 40 ns. **A-10:** com `MEM_SEL_AES = 0`, endereço/dado/`wr_en` sem X/Z na subida de `mem_clk`. | Checagem com pouco código. A-09 vigia o *próprio* testbench. |
+| 8.2 | ✏️ `Makefile` | `make regress`: roda todos os testes com 3 seeds e imprime tabela PASS/FAIL. | Evidência fácil; a regressão só é exigida em dezembro, então é ponto a favor. |
+| 8.3 | 🆕 `tests/minisoc_spi_abort_test.sv` *(opcional)* | **T-SPI-ABORT:** frames interrompidos no meio + frames válidos; nenhum registrador pode mudar. | Robustez, se sobrar tempo. |
+
+### Fica para dezembro (registrar no VPLAN v2)
+
+Monitor/checker completo do PLL (período do `sys_clk`, janela de lock), virtual
+sequencer, covergroups e tudo do AES (monitor, refmod, scoreboard).
 
 ---
 
-## 6. "Justificar escolhas de arquitetura" — prepare respostas
+## 6. Resumo
 
-O checkpoint pede isso explicitamente (25% da nota é domínio/justificativa).
+**~24 arquivos novos · 8 alterados** (`top_tb`, `env_cfg`, `env`, `env_pkg`,
+`base_test`, `test_pkg`, `Makefile`, `top_assertions`).
 
-| Pergunta provável | Sua resposta (ajuste ao que implementar) |
+| Teste | Etapa | Verifica | Checker |
+|---|---|---|---|
+| `minisoc_smoke_test` | — | clock + reset (já existe) | SVA A-01 |
+| `minisoc_mem_rw_test` | 2–3, 7 | memória + ownership | mem_scoreboard |
+| `minisoc_rst_default_test` | 5 | valores de reset via SPI | spi_scoreboard |
+| `minisoc_spi_reg_test` | 6 | todos os registradores | spi_scoreboard |
+| `minisoc_pll_bringup_test` | 7 | PLL trava nos 4 divisores | limite + leitura |
+| `minisoc_spi_abort_test` | 8 (opcional) | frame interrompido | spi_scoreboard |
+
+**Prioridade se o tempo acabar:** Etapas 1–3 (memória) → 4–6 (SPI) → 7 → 8.
+Memória + SPI com scoreboard é o núcleo; o resto é bônus.
+
+---
+
+## 7. Decisões de arquitetura (o que a banca vai perguntar)
+
+| Decisão | Por quê |
 |---|---|
-| Por que clk/rst são agents sem sequencer? | Não há transação a sequenciar; parâmetros (período, duração) vêm do `cfg`. **Atenção:** o Plano Dia 3 dizia "drivers direto no env, sem agentes"; você implementou como agent (driver only). Justifique: padrão uniforme, reuso (dois `clk_agent` para `clk` e `mem_clk`), fácil tornar passivo. Registre no VPLAN. |
-| Por que o SPI tem sequencer e o reset não? | SPI tem transações com conteúdo (op, addr, data) e ordem importa; reset é um nível. |
-| Por que a leitura é um item só se no fio são 2 frames? | Abstração no nível de registrador: o teste pensa "ler addr X". O driver esconde o NOP; o monitor recompõe. |
-| Por que `put_response` e não modificar o item? | Decisão do Dia 3; separa pedido de resposta e permite pipelining no futuro. |
-| Por que scoreboard próprio e não RAL? | Mapa pequeno (16 registros), prazo curto, controle total da regra de BUSY/RO; RAL fica como evolução. |
-| Como o monitor de memória sabe o que é transação? | Decisão do *valid* (3.3). |
-| Como o scoreboard sabe se a escrita deve valer? | Lê `MEM_SEL_AES` pelo `probe_if` (sinal interno, sem bind ainda). |
-| Por que `UVM_ERROR` × `UVM_FATAL`? | Divergência de dado = erro (continua para achar mais); falta de `vif`/timeout = fatal (ambiente quebrado). Decisão do Dia 3. |
-| Por que `sclk` default de 20 MHz? | Dentro de REQ-SPI-01 (≤ 25 MHz) com margem; A-09 garante que o TB nunca passa disso. |
+| Memória antes do SPI | Protocolo mais simples e independente (`MEM_SEL_AES = 0` no reset); serve de modelo para o SPI. |
+| MEM e SPI têm sequencer; clk/rst não | MEM/SPI têm transações com conteúdo e ordem; clock e reset são só parâmetros. |
+| `tb_valid` no `mem_if` | A interface não tem *valid*; sem ele o monitor veria "leituras fantasmas" todo ciclo. |
+| Leitura SPI é 1 item, mas são 2 frames | Abstração: o teste pensa em registrador; driver e monitor cuidam do protocolo. |
+| clk/rst como *agents* (o Dia 3 dizia "só driver") | Padrão uniforme, reuso (2 `clk_agent`) e fácil tornar passivo. |
+| Scoreboard próprio, sem RAL | 16 registros, prazo curto, controle total das regras. RAL é evolução futura. |
+| `MEM_SEL_AES` lido do `probe_if` | Sinal interno; o scoreboard precisa saber quem é o dono no instante do acesso. |
+| `UVM_ERROR` × `UVM_FATAL` | Dado errado = ERROR (continua achando mais). Ambiente quebrado / timeout = FATAL. |
 
 ---
 
-## 7. Apresentação (6–8 slides)
+## 8. Depois do código: VPLAN v2, evidências, apresentação
 
-1. Onde paramos em outubro → o que o marco de novembro pede.
-2. Arquitetura atualizada (diagrama com spi/mem agents e scoreboards).
-3. VIP SPI: frame de 40 bits, write × read (2 frames), print da wave.
-4. VIP MEMORY DATA: write/read, latência, decisão do *valid*, print da wave.
-5. Checagens locais: `spi_scoreboard`, `mem_scoreboard`, A-09/A-10; a falha provocada.
-6. Configuração básica do DUT: PLL enable → LOCKED via SPI; ownership.
-7. Testes + regressão (tabela PASS/FAIL) + VPLAN v2 (o que mudou de status).
-8. Gaps, OPEN-xx, plano de dezembro (AES end-to-end, refmod, primeira regressão completa).
+**VPLAN v2** (`verif/doc/CI-Expert_Fase2_Verification_Plan_v2.docx`): versão
+V2.0; VCS `X-2025.06-SP2` e `UVM-1.2`; diagrama novo; decisões da seção 7;
+F01, F08, F09, F12, F13 (e F05) → `IMPLEMENTADO` com o log; OPEN-03 fechado
+com o `VERSION` lido; lista do que foi para dezembro.
 
-Tenha `make compile run TEST=minisoc_spi_reg_test` pronto para rodar ao vivo.
+**Evidências** (`verif/doc/evidencias/novembro/`): logs com `TEST PASSED`;
+saída do `make regress`; print do Verdi de uma escrita/leitura na memória e de
+um WRITE e um READ SPI; trecho do scoreboard ("N comparadas, 0 erros"); **uma
+falha provocada de propósito** (prova de que o scoreboard não está "dormindo").
 
----
-
-## 8. Cronograma dia a dia
-
-| Dia | Meta | Pronto quando |
-|---|---|---|
-| **Ter 24/11** | Pendências de outubro (2). `spi_if`, `spi_item`, `spi_cfg`, `spi_driver`. Ligar no `top_tb`. | Compila; um WRITE aparece certo na wave. |
-| **Qua 25/11** | `spi_monitor`, `spi_agent`, sequences write/read. `minisoc_rst_default_test`. | Lê `VERSION = 0x0001_0100` via SPI e o monitor imprime a transação. |
-| **Qui 26/11** | `spi_scoreboard`. `minisoc_spi_reg_test`. `minisoc_cfg_seq` + `minisoc_pll_bringup_test` básico. A-09. | T-RST-DEFAULT e T-SPI-REG PASS com scoreboard ativo; `PLL_LOCKED = 1` lido. |
-| **Sex 27/11** | VIP MEMORY completo (if, item, driver, monitor, agent, seqs). `mem_scoreboard`. | Escrita/leitura em 0, 1023 e aleatórios batendo no scoreboard. |
-| **Sáb 28/11** | `minisoc_mem_rw_test` com ownership (via SPI). A-10. `make regress`. Folga para bugs. | Todos os testes PASS em 2–3 seeds. |
-| **Dom 29/11** | Evidências (5), VPLAN v2 (4), diagrama, slides (7). | Pasta `evidencias/novembro/` completa; slides prontos. |
-| **Seg 30/11** | Ensaio (cronometrar), respostas da seção 6, commit + tag (`minisoc-nov-2026`). | Demo ao vivo roda do zero com `make clean compile run`. |
-
-**Regra de corte:** se na sexta à noite o VIP SPI ainda não estiver com
-scoreboard funcionando, pule T-PLL-BRINGUP e T-SPI-ABORT e vá direto para a
-memória. SPI + MEMORY com checagem local são o núcleo obrigatório; PLL e
-frame abortado não são.
+**Slides (6–8):** outubro → novembro · arquitetura · VIP MEMORY · VIP SPI ·
+checagens · configuração do DUT + ownership · testes + regressão + VPLAN ·
+plano de dezembro.
 
 ---
 
-## 9. Checklist final (30/11)
+## 9. Aprovação
 
-- [ ] `make clean compile` sem erros
-- [ ] T-SMOKE, T-RST-DEFAULT, T-SPI-REG, T-MEM-RW passando (+ T-PLL-BRINGUP se feito)
-- [ ] `make regress` com resumo PASS/FAIL
-- [ ] `spi_scoreboard` e `mem_scoreboard` com contagem de comparações no `report_phase`
-- [ ] A-09 e A-10 ativas
-- [ ] VPLAN v2 salvo em `verif/doc/`
-- [ ] diagrama `tb_arch` atualizado
-- [ ] evidências em `verif/doc/evidencias/novembro/`
-- [ ] slides prontos e ensaiados
-- [ ] tudo commitado
+Marque cada item. Os marcados "Ajustar" eu reescrevo antes de começar.
+
+| # | Decisão | Aprovo | Ajustar |
+|---|---|---|---|
+| 1 | Tudo hoje, numa sessão, na ordem das Etapas 1 → 8 | [ ] | [ ] |
+| 2 | Memória (Etapas 1–3) antes do SPI (4–6); integração por último (7) | [ ] | [ ] |
+| 3 | `tb_valid` no `mem_if` para o monitor da memória | [ ] | [ ] |
+| 4 | Scoreboard próprio de registradores, sem RAL | [ ] | [ ] |
+| 5 | Sequences em `sequences/` com pacote próprio `minisoc_seq_pkg` | [ ] | [ ] |
+| 6 | Checker completo do PLL vai para dezembro (registrado no VPLAN v2) | [ ] | [ ] |
+| 7 | **Modo de execução:** ao fim de cada etapa eu rodo `make compile run`, te mostro o resultado e deixo tudo *staged* para você revisar — sem commit/push meu | [ ] | [ ] |
+
+**Decisão final:** [ ] Aprovo a execução do plano  [ ] Não aprovo / ajustar antes

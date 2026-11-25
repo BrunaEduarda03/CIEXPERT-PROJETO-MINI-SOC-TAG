@@ -24,7 +24,4 @@ verif/tb/refmod/cpp/prog
 *.swp
 ~$*
 
-# Material do instrutor marcado como CONFIDENCIAL (especificacao e templates):
-# fica so na maquina local, nao vai para o GitHub (repositorio publico).
-docs/especificacao/
-docs/templates/
+
