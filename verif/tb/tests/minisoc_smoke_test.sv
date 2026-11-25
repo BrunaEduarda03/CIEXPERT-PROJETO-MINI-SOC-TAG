@@ -2,7 +2,7 @@
 // minisoc_smoke_test.sv  (T-SMOKE, VPLAN secao 8)
 // P0/P1: verifica que clock e reset funcionam e que o DUT inicializa.
 //   1. Espera o reset inicial (duracao randomizada 10..50 ciclos).
-//   2. Mede o periodo de clk (500 ps) e de mem_clk (10 ns).
+//   2. Mede o periodo de clk (500 ps) e de mem_clk (5 ns = 200 MHz).
 //   3. Confere os valores default apos o reset (F01 / CHK-01).
 //   4. Aplica um reset em runtime e confere os defaults durante e apos o
 //      reset, exercitando a API do rst_agent.

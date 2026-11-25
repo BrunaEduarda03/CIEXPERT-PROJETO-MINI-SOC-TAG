@@ -5,6 +5,7 @@
 #   make compile              so compila
 #   make run TEST=<teste> SEED=<n> VERBOSITY=UVM_HIGH WAVES=fsdb|vcd
 #   make run ... PLUSARGS="+MEM_SCB_INJECT_ERR"   plusargs extras para o simv
+#   make run ... PLUSARGS="+SPI_SCLK_PERIOD_NS=50"  SPI a 20 MHz (padrao: 25 MHz)
 #   make verdi                abre o Verdi com as waves FSDB do ultimo run
 #   make clean
 #==============================================================================
@@ -38,6 +39,8 @@ TB_INCDIRS := \
 	+incdir+$(TB_DIR)/agents/rst \
 	+incdir+$(TB_DIR)/agents/mem \
 	+incdir+$(TB_DIR)/sequences/mem \
+	+incdir+$(TB_DIR)/agents/spi \
+	+incdir+$(TB_DIR)/sequences/spi \
 	+incdir+$(TB_DIR)/env \
 	+incdir+$(TB_DIR)/tests
 
@@ -45,11 +48,14 @@ TB_SRCS := \
 	$(TB_DIR)/agents/clk/clk_if.sv \
 	$(TB_DIR)/agents/rst/rst_if.sv \
 	$(TB_DIR)/agents/mem/mem_if.sv \
+	$(TB_DIR)/agents/spi/spi_if.sv \
 	$(TB_DIR)/minisoc_probe_if.sv \
 	$(TB_DIR)/agents/clk/clk_pkg.sv \
 	$(TB_DIR)/agents/rst/rst_pkg.sv \
 	$(TB_DIR)/agents/mem/mem_pkg.sv \
 	$(TB_DIR)/sequences/mem/mem_seq_pkg.sv \
+	$(TB_DIR)/agents/spi/spi_pkg.sv \
+	$(TB_DIR)/sequences/spi/spi_seq_pkg.sv \
 	$(TB_DIR)/env/minisoc_env_pkg.sv \
 	$(TB_DIR)/tests/minisoc_test_pkg.sv
 
@@ -108,4 +114,4 @@ clean:
 	rm -rf $(SIM_DIR)
 
 help:
-	@sed -n '2,10p' Makefile
+	@sed -n '2,11p' Makefile

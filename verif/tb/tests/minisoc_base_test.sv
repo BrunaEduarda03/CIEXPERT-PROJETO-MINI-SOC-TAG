@@ -29,6 +29,8 @@ class minisoc_base_test extends uvm_test;
       `uvm_fatal("TEST_NOVIF", "rst_vif nao encontrado no config_db")
     if (!uvm_config_db#(virtual mem_if)::get(this, "", "mem_vif", env_cfg.mem.vif))
       `uvm_fatal("TEST_NOVIF", "mem_vif nao encontrado no config_db")
+    if (!uvm_config_db#(virtual spi_if)::get(this, "", "spi_vif", env_cfg.spi.vif))
+      `uvm_fatal("TEST_NOVIF", "spi_vif nao encontrado no config_db")
     if (!uvm_config_db#(virtual minisoc_probe_if)::get(this, "", "probe_vif", env_cfg.probe_vif))
       `uvm_fatal("TEST_NOVIF", "probe_vif nao encontrado no config_db")
 
@@ -36,6 +38,7 @@ class minisoc_base_test extends uvm_test;
       `uvm_fatal("TEST_RAND", "falha ao randomizar rst_cfg")
 
     configure_env();
+    apply_plusargs();
 
     uvm_config_db#(minisoc_env_cfg)::set(this, "env", "cfg", env_cfg);
     env = minisoc_env::type_id::create("env", this);
@@ -45,6 +48,19 @@ class minisoc_base_test extends uvm_test;
 
   // Gancho para testes derivados alterarem env_cfg antes do build do env.
   virtual function void configure_env();
+  endfunction
+
+  // Variacoes pela linha de comando (aplicadas depois de configure_env, entao
+  // valem para qualquer teste):
+  //   +SPI_SCLK_PERIOD_NS=<n>  periodo de sclk; ex.: 50 = 20 MHz. O spi_agent
+  //                            recusa < 40 ns (> 25 MHz, REQ-SPI-01).
+  function void apply_plusargs();
+    int unsigned v;
+    if ($value$plusargs("SPI_SCLK_PERIOD_NS=%d", v)) begin
+      env_cfg.spi.sclk_period_ns = v;
+      `uvm_info(get_type_name(), $sformatf("+SPI_SCLK_PERIOD_NS: sclk = %0d ns (%0.1f MHz)",
+                                           v, env_cfg.spi.sclk_mhz()), UVM_LOW)
+    end
   endfunction
 
   function void end_of_elaboration_phase(uvm_phase phase);

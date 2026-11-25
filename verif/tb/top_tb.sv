@@ -17,14 +17,8 @@ module top_tb;
   clk_if mem_clk_if ();                       // mem_clk
   rst_if rst_if_i   (.clk(ref_clk_if.clk));   // rst_n
   mem_if mem_if_i   (.mem_clk(mem_clk_if.clk)); // MEMORY DATA
+  spi_if spi_if_i   ();                         // SPI (sclk gerado pelo spi_driver)
 
-  //---------------------------------------------------------------------------
-  // SPI: mantido em repouso ate o agente de P2.
-  //---------------------------------------------------------------------------
-  logic        spi_sclk    = 1'b0;
-  logic        spi_cs_n    = 1'b1;
-  logic        spi_mosi    = 1'b0;
-  logic        spi_miso;
 
   //---------------------------------------------------------------------------
   // DUT
@@ -33,10 +27,10 @@ module top_tb;
     .clk         (ref_clk_if.clk),
     .rst_n       (rst_if_i.rst_n),
 
-    .spi_sclk    (spi_sclk),
-    .spi_cs_n    (spi_cs_n),
-    .spi_mosi    (spi_mosi),
-    .spi_miso    (spi_miso),
+    .spi_sclk    (spi_if_i.sclk),
+    .spi_cs_n    (spi_if_i.cs_n),
+    .spi_mosi    (spi_if_i.mosi),
+    .spi_miso    (spi_if_i.miso),
 
     .mem_clk     (mem_clk_if.clk),
     .mem_i_data  (mem_if_i.mem_i_data),
@@ -69,7 +63,7 @@ module top_tb;
   assign probe_if.aes_done_spi        = dut.aes_done_spi;
   assign probe_if.aes_error_spi       = dut.aes_error_spi;
   assign probe_if.aes_blocks_done_spi = dut.aes_blocks_done_spi;
-  assign probe_if.spi_miso            = spi_miso;
+  assign probe_if.spi_miso            = spi_if_i.miso;
 
   //---------------------------------------------------------------------------
   // UVM
@@ -79,6 +73,7 @@ module top_tb;
     uvm_config_db#(virtual clk_if)::set(null, "uvm_test_top", "mem_clk_vif", mem_clk_if);
     uvm_config_db#(virtual rst_if)::set(null, "uvm_test_top", "rst_vif",     rst_if_i);
     uvm_config_db#(virtual mem_if)::set(null, "uvm_test_top", "mem_vif",     mem_if_i);
+    uvm_config_db#(virtual spi_if)::set(null, "uvm_test_top", "spi_vif",     spi_if_i);
     uvm_config_db#(virtual minisoc_probe_if)::set(null, "uvm_test_top", "probe_vif", probe_if);
     run_test();
   end

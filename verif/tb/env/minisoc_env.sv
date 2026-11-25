@@ -1,8 +1,8 @@
 //-----------------------------------------------------------------------------
 // minisoc_env.sv
-// Ambiente de topo. Contem os agentes de clock, reset (P0/P1), MEMORY DATA e
-// o mem_scoreboard (P3, CHK-04), ligado em mem_agt.mon.ap. spi_agent, demais
-// scoreboards e coverage entram nas fases P2-P5 (VPLAN, secao 4.2).
+// Ambiente de topo. Contem os agentes de clock, reset (P0/P1), SPI (P2),
+// MEMORY DATA e o mem_scoreboard (P3, CHK-04), ligado em mem_agt.mon.ap.
+// spi_scoreboard (CHK-02) e coverage entram depois (VPLAN, secao 4.2).
 //-----------------------------------------------------------------------------
 class minisoc_env extends uvm_env;
   `uvm_component_utils(minisoc_env)
@@ -13,6 +13,7 @@ class minisoc_env extends uvm_env;
   clk_agent mem_clk_agt;   // mem_clk
   rst_agent rst_agt;       // rst_n
   mem_agent mem_agt;       // MEMORY DATA
+  spi_agent spi_agt;       // SPI
 
   mem_scoreboard mem_scb;  // CHK-04
 
@@ -29,11 +30,13 @@ class minisoc_env extends uvm_env;
     uvm_config_db#(clk_cfg)::set(this, "mem_clk_agt", "cfg", cfg.mem_clk);
     uvm_config_db#(rst_cfg)::set(this, "rst_agt",     "cfg", cfg.rst);
     uvm_config_db#(mem_cfg)::set(this, "mem_agt",     "cfg", cfg.mem);
+    uvm_config_db#(spi_cfg)::set(this, "spi_agt",     "cfg", cfg.spi);
 
     ref_clk_agt = clk_agent::type_id::create("ref_clk_agt", this);
     mem_clk_agt = clk_agent::type_id::create("mem_clk_agt", this);
     rst_agt     = rst_agent::type_id::create("rst_agt",     this);
     mem_agt     = mem_agent::type_id::create("mem_agt",     this);
+    spi_agt     = spi_agent::type_id::create("spi_agt",     this);
 
     mem_scb                   = mem_scoreboard::type_id::create("mem_scb", this);
     mem_scb.probe_vif         = cfg.probe_vif;
