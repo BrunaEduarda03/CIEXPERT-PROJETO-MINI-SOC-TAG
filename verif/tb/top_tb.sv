@@ -16,19 +16,15 @@ module top_tb;
   clk_if ref_clk_if ();                       // clk 2 GHz
   clk_if mem_clk_if ();                       // mem_clk
   rst_if rst_if_i   (.clk(ref_clk_if.clk));   // rst_n
+  mem_if mem_if_i   (.mem_clk(mem_clk_if.clk)); // MEMORY DATA
 
   //---------------------------------------------------------------------------
-  // SPI e MEMORY DATA: mantidos em repouso ate os agentes de P2/P3.
+  // SPI: mantido em repouso ate o agente SPI (Parte 2).
   //---------------------------------------------------------------------------
   logic        spi_sclk    = 1'b0;
   logic        spi_cs_n    = 1'b1;
   logic        spi_mosi    = 1'b0;
   logic        spi_miso;
-
-  logic [31:0] mem_i_data  = '0;
-  logic        mem_i_wr_en = 1'b0;
-  logic [9:0]  mem_i_addr  = '0;
-  logic [31:0] mem_o_data;
 
   //---------------------------------------------------------------------------
   // DUT
@@ -43,10 +39,10 @@ module top_tb;
     .spi_miso    (spi_miso),
 
     .mem_clk     (mem_clk_if.clk),
-    .mem_i_data  (mem_i_data),
-    .mem_i_wr_en (mem_i_wr_en),
-    .mem_i_addr  (mem_i_addr),
-    .mem_o_data  (mem_o_data)
+    .mem_i_data  (mem_if_i.mem_i_data),
+    .mem_i_wr_en (mem_if_i.mem_i_wr_en),
+    .mem_i_addr  (mem_if_i.mem_i_addr),
+    .mem_o_data  (mem_if_i.mem_o_data)
   );
 
   //---------------------------------------------------------------------------
@@ -82,6 +78,7 @@ module top_tb;
     uvm_config_db#(virtual clk_if)::set(null, "uvm_test_top", "ref_clk_vif", ref_clk_if);
     uvm_config_db#(virtual clk_if)::set(null, "uvm_test_top", "mem_clk_vif", mem_clk_if);
     uvm_config_db#(virtual rst_if)::set(null, "uvm_test_top", "rst_vif",     rst_if_i);
+    uvm_config_db#(virtual mem_if)::set(null, "uvm_test_top", "mem_vif",     mem_if_i);
     uvm_config_db#(virtual minisoc_probe_if)::set(null, "uvm_test_top", "probe_vif", probe_if);
     run_test();
   end

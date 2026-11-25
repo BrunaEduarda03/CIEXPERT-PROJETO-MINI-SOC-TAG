@@ -9,6 +9,7 @@ class minisoc_env_cfg extends uvm_object;
   clk_cfg ref_clk;    // clk: referencia 2 GHz (500 ps)
   clk_cfg mem_clk;    // mem_clk: MEMORY DATA, 100 MHz nominal
   rst_cfg rst;        // rst_n
+  mem_cfg mem;        // MEMORY DATA
 
   virtual minisoc_probe_if probe_vif;
 
@@ -19,11 +20,12 @@ class minisoc_env_cfg extends uvm_object;
     mem_clk           = clk_cfg::type_id::create("mem_clk");
     mem_clk.period_ps = 10000;
     rst               = rst_cfg::type_id::create("rst");
+    mem               = mem_cfg::type_id::create("mem");
   endfunction
 
   function string convert2string();
-    return $sformatf("ref_clk=%0d ps | mem_clk=%0d ps | reset inicial=%0d ciclos",
-                     ref_clk.period_ps, mem_clk.period_ps, rst.assert_cycles);
+    return $sformatf("ref_clk=%0d ps | mem_clk=%0d ps | reset inicial=%0d ciclos | mem_agt=%s",
+                     ref_clk.period_ps, mem_clk.period_ps, rst.assert_cycles, mem.is_active.name());
   endfunction
 
 endclass : minisoc_env_cfg
